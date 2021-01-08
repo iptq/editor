@@ -13,6 +13,10 @@ members = [
 anyhow = "1.0.37"
 bass-sys = { path = "bass-sys" }
 ggez = "0.5.1"
-libosu = "0.0.11"
 log = "0.4.11"
 stderrlog = "0.5.0"
+num = "0.3.1"
+
+[dependencies.libosu]
+git = "https://github.com/iptq/libosu"
+rev = "7acc09af59b789f78c21c259d4e1e246e9cf0b08"

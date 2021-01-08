@@ -1,3 +1,5 @@
+#![feature(vec_into_raw_parts)]
+
 #[macro_use]
 extern crate anyhow;
 #[macro_use]
@@ -6,6 +8,10 @@ extern crate bass_sys as bass;
 
 mod audio;
 mod game;
+mod math;
+mod slider_render;
+
+use std::env;
 
 use anyhow::Result;
 use ggez::{
@@ -29,7 +35,8 @@ fn main() -> Result<()> {
 
     let (ctx, event_loop) = &mut cb.build()?;
     let mut game = Game::new()?;
-    game.load_beatmap("happy-time/Nanamori-chu  Goraku-bu - Happy Time wa Owaranai (Cut Ver.) (-Keitaro) [Osu's Expert].osu")?;
+    let path = env::args().nth(1).unwrap();
+    game.load_beatmap(path)?;
     event::run(ctx, event_loop, &mut game)?;
 
     Ok(())

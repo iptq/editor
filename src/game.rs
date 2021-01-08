@@ -5,13 +5,15 @@ use std::path::Path;
 use anyhow::Result;
 use ggez::{
     event::{EventHandler, KeyCode, KeyMods},
-    graphics::{self, DrawMode, DrawParam, FillOptions, StrokeOptions, FilterMode, Mesh, Text, WHITE},
-    nalgebra::Point2,
+    graphics::{
+        self, DrawMode, DrawParam, FillOptions, FilterMode, Mesh, Rect, StrokeOptions, Text, WHITE,
+    },
     Context, GameError, GameResult,
 };
-use libosu::{Beatmap, HitObject};
+use libosu::{Beatmap, HitObject, HitObjectKind};
 
 use crate::audio::{AudioEngine, Sound};
+use crate::slider_render::render_slider;
 
 pub struct Game {
     is_playing: bool,
@@ -26,6 +28,7 @@ impl Game {
         let audio_engine = AudioEngine::new()?;
         let beatmap = Beatmap::default();
         let hit_objects = Vec::new();
+
         Ok(Game {
             is_playing: false,
             audio_engine,
@@ -60,6 +63,9 @@ impl Game {
     }
 
     fn priv_draw(&mut self, ctx: &mut Context) -> Result<()> {
+        // TODO: lol
+        const EDITOR_SCREEN: Rect = Rect::new(112.0, 84.0, 800.0, 600.0);
+
         graphics::clear(ctx, [0.0, 0.0, 0.0, 1.0].into());
 
         let time = self.song.as_ref().unwrap().position()?;
@@ -76,15 +82,42 @@ impl Game {
             }
         }
 
-        info!("# hitobjects: {} / {}", visible_hitobjects.len(), self.beatmap.hit_objects.len());
+        let osupx_scale_x = EDITOR_SCREEN.w / 512.0;
+        let osupx_scale_y = EDITOR_SCREEN.h / 384.0;
+        let cs_osupx = 54.4 - 4.48 * self.beatmap.difficulty.circle_size;
+        let cs_real = cs_osupx * osupx_scale_x;
+
         for ho in visible_hitobjects.iter() {
             let ho_time = (ho.start_time.0 as f64) / 1000.0;
-            let circ = Mesh::new_circle(ctx, DrawMode::Fill(FillOptions::default()), [ho.pos.0 as f32, ho.pos.1 as f32], 10.0, 1.0, WHITE)?;
+            let pos = [
+                EDITOR_SCREEN.x + osupx_scale_x * ho.pos.0 as f32,
+                EDITOR_SCREEN.y + osupx_scale_y * ho.pos.1 as f32,
+            ];
+
+            if let HitObjectKind::Slider(_) = ho.kind {
+                render_slider(ctx, EDITOR_SCREEN, &self.beatmap, ho)?;
+            }
+
+            let circ = Mesh::new_circle(
+                ctx,
+                DrawMode::Fill(FillOptions::default()),
+                pos,
+                cs_real,
+                1.0,
+                WHITE,
+            )?;
             graphics::draw(ctx, &circ, DrawParam::default())?;
 
             let time_diff = ho_time - time;
-            let approach_r = 10.0 * (1.0 + 2.0 * time_diff as f32 / 0.75);
-            let approach = Mesh::new_circle(ctx, DrawMode::Stroke(StrokeOptions::default()), [ho.pos.0 as f32, ho.pos.1 as f32], approach_r, 1.0, WHITE)?;
+            let approach_r = cs_real * (1.0 + 2.0 * time_diff as f32 / 0.75);
+            let approach = Mesh::new_circle(
+                ctx,
+                DrawMode::Stroke(StrokeOptions::default()),
+                pos,
+                approach_r,
+                1.0,
+                WHITE,
+            )?;
             graphics::draw(ctx, &approach, DrawParam::default())?;
         }
 
