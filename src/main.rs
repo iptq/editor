@@ -30,7 +30,8 @@ fn main() -> Result<()> {
         .init()
         .unwrap();
 
-    let cb = ContextBuilder::new("super_simple", "ggez")
+    let cb = ContextBuilder::new("osu_editor", "ggez")
+        .add_resource_path("skin")
         .window_setup(WindowSetup::default().title("OSU editor"))
         .window_mode(WindowMode::default().dimensions(1024.0, 768.0));
 

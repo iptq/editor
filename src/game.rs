@@ -10,11 +10,13 @@ use ggez::{
         self, Color, DrawMode, DrawParam, FillOptions, FilterMode, Mesh, Rect, StrokeOptions, Text,
         WHITE,
     },
+    nalgebra::Point2,
     Context, GameError, GameResult,
 };
 use libosu::{Beatmap, HitObject, HitObjectKind, Point, SpinnerInfo};
 
 use crate::audio::{AudioEngine, Sound};
+use crate::skin::Skin;
 use crate::slider_render::{render_slider, Spline};
 
 pub type SliderCache = HashMap<Vec<Point<i32>>, Spline>;
@@ -25,6 +27,7 @@ pub struct Game {
     song: Option<Sound>,
     beatmap: Beatmap,
     hit_objects: Vec<HitObject>,
+    skin: Skin,
 
     slider_cache: SliderCache,
 }
@@ -34,6 +37,7 @@ impl Game {
         let audio_engine = AudioEngine::new()?;
         let beatmap = Beatmap::default();
         let hit_objects = Vec::new();
+        let skin = Skin::new();
 
         Ok(Game {
             is_playing: false,
@@ -41,6 +45,7 @@ impl Game {
             beatmap,
             hit_objects,
             song: None,
+            skin,
             slider_cache: SliderCache::default(),
         })
     }
@@ -56,7 +61,7 @@ impl Game {
         let dir = path.parent().unwrap();
 
         let song = Sound::create(dir.join(&self.beatmap.audio_filename))?;
-        song.set_position(113.0)?;
+        song.set_position(36.5)?;
         self.song = Some(song);
 
         Ok(())
@@ -74,14 +79,14 @@ impl Game {
 
     fn priv_draw(&mut self, ctx: &mut Context) -> Result<()> {
         // TODO: lol
-        const EDITOR_SCREEN: Rect = Rect::new(112.0, 84.0, 800.0, 600.0);
+        const PLAYFIELD_BOUNDS: Rect = Rect::new(112.0, 112.0, 800.0, 600.0);
 
         graphics::clear(ctx, [0.0, 0.0, 0.0, 1.0].into());
 
         let playfield = Mesh::new_rectangle(
             ctx,
             DrawMode::Stroke(StrokeOptions::default()),
-            EDITOR_SCREEN,
+            PLAYFIELD_BOUNDS,
             Color::new(1.0, 1.0, 1.0, 0.5),
         )?;
         graphics::draw(ctx, &playfield, DrawParam::default())?;
@@ -128,9 +133,9 @@ impl Game {
             }
         }
 
-        let cs_scale = EDITOR_SCREEN.w / 640.0;
-        let osupx_scale_x = EDITOR_SCREEN.w / 512.0;
-        let osupx_scale_y = EDITOR_SCREEN.h / 384.0;
+        let cs_scale = PLAYFIELD_BOUNDS.w / 640.0;
+        let osupx_scale_x = PLAYFIELD_BOUNDS.w / 512.0;
+        let osupx_scale_y = PLAYFIELD_BOUNDS.h / 384.0;
         let cs_osupx = self.beatmap.difficulty.circle_size_osupx();
         let cs_real = cs_osupx * cs_scale;
 
@@ -138,8 +143,8 @@ impl Game {
             let ho = draw_info.hit_object;
             let ho_time = (ho.start_time.0 as f64) / 1000.0;
             let pos = [
-                EDITOR_SCREEN.x + osupx_scale_x * ho.pos.0 as f32,
-                EDITOR_SCREEN.y + osupx_scale_y * ho.pos.1 as f32,
+                PLAYFIELD_BOUNDS.x + osupx_scale_x * ho.pos.0 as f32,
+                PLAYFIELD_BOUNDS.y + osupx_scale_y * ho.pos.1 as f32,
             ];
             let color = graphics::Color::new(1.0, 1.0, 1.0, draw_info.opacity as f32);
 
@@ -148,7 +153,7 @@ impl Game {
                 let spline = render_slider(
                     &mut self.slider_cache,
                     ctx,
-                    EDITOR_SCREEN,
+                    PLAYFIELD_BOUNDS,
                     &self.beatmap,
                     ho,
                     color,
@@ -166,10 +171,11 @@ impl Game {
                         travel_percent = 1.0 - travel_percent;
                     }
                     let travel_length = travel_percent * info.pixel_length;
+                    print!("ho={:.3} ", ho_time);
                     let pos = spline.point_at_length(travel_length);
                     let ball_pos = [
-                        EDITOR_SCREEN.x + osupx_scale_x * pos.0 as f32,
-                        EDITOR_SCREEN.y + osupx_scale_y * pos.1 as f32,
+                        PLAYFIELD_BOUNDS.x + osupx_scale_x * pos.0 as f32,
+                        PLAYFIELD_BOUNDS.y + osupx_scale_y * pos.1 as f32,
                     ];
                     let ball = Mesh::new_circle(
                         ctx,
@@ -183,28 +189,26 @@ impl Game {
                 }
             }
 
-            let circ = Mesh::new_circle(
+            self.skin.hitcircle.draw(
                 ctx,
-                DrawMode::Fill(FillOptions::default()),
-                pos,
-                cs_real,
-                1.0,
-                color,
+                (cs_real * 2.0, cs_real * 2.0),
+                DrawParam::default().dest(pos).color(color),
             )?;
-            graphics::draw(ctx, &circ, DrawParam::default())?;
+
+            self.skin.hitcircleoverlay.draw(
+                ctx,
+                (cs_real * 2.0, cs_real * 2.0),
+                DrawParam::default().dest(pos).color(color),
+            )?;
 
             if time < ho_time {
                 let time_diff = ho_time - time;
                 let approach_r = cs_real * (1.0 + 2.0 * time_diff as f32 / 0.75);
-                let approach = Mesh::new_circle(
+                self.skin.approachcircle.draw(
                     ctx,
-                    DrawMode::Stroke(StrokeOptions::default().with_line_width(2.0)),
-                    pos,
-                    approach_r,
-                    1.0,
-                    WHITE,
+                    (approach_r * 2.0, approach_r * 2.0),
+                    DrawParam::default().dest(pos).color(color),
                 )?;
-                graphics::draw(ctx, &approach, DrawParam::default())?;
             }
         }
 

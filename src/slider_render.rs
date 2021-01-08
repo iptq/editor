@@ -230,8 +230,6 @@ impl Spline {
                 let n = self.spline_points.len() - 1;
                 if idx == 0 && self.spline_points.len() > 2 {
                     return self.spline_points[0];
-                } else if idx >= n {
-                    return self.spline_points[n];
                 }
 
                 let (len1, len2) = (
@@ -240,7 +238,11 @@ impl Spline {
                 );
                 let proportion = (length - len1) / (len2 - len1);
 
-                let (p1, p2) = (self.spline_points[idx], self.spline_points[idx + 1]);
+                let (p1, p2) = (self.spline_points[idx - 1], self.spline_points[idx]);
+                // println!(
+                //     "len={:.3} idx={} len1={:.3} len2={:.3} prop={:.3} p1={:.3} p2={:.3}",
+                //     length, idx, len1, len2, proportion, p1, p2
+                // );
                 assert!(p1 != p2);
                 (p2 - p1) * proportion + p1
             }
