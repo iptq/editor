@@ -6,18 +6,19 @@ use std::path::Path;
 use anyhow::Result;
 use ggez::{
     event::{EventHandler, KeyCode, KeyMods},
-    nalgebra::Point2,
     graphics::{
         self, Color, DrawMode, DrawParam, FillOptions, FilterMode, Mesh, Rect, StrokeOptions, Text,
         WHITE,
     },
+    nalgebra::Point2,
     Context, GameError, GameResult,
 };
-use libosu::{Beatmap, HitObject, HitObjectKind, Point, SpinnerInfo};
+use libosu::{Beatmap, HitObject, HitObjectKind, Point, SpinnerInfo, Spline};
 
 use crate::audio::{AudioEngine, Sound};
+use crate::beatmap::BeatmapExt;
 use crate::skin::Skin;
-use crate::slider_render::{render_slider, Spline};
+use crate::slider_render::render_slider;
 
 pub type SliderCache = HashMap<Vec<Point<i32>>, Spline>;
 
@@ -25,8 +26,7 @@ pub struct Game {
     is_playing: bool,
     audio_engine: AudioEngine,
     song: Option<Sound>,
-    beatmap: Beatmap,
-    hit_objects: Vec<HitObject>,
+    beatmap: BeatmapExt,
     pub skin: Skin,
     frame: usize,
     slider_cache: SliderCache,
@@ -35,15 +35,15 @@ pub struct Game {
 impl Game {
     pub fn new() -> Result<Game> {
         let audio_engine = AudioEngine::new()?;
-        let beatmap = Beatmap::default();
-        let hit_objects = Vec::new();
         let skin = Skin::new();
+
+        let beatmap = Beatmap::default();
+        let beatmap = BeatmapExt::new(beatmap);
 
         Ok(Game {
             is_playing: false,
             audio_engine,
             beatmap,
-            hit_objects,
             song: None,
             skin,
             frame: 0,
@@ -57,11 +57,13 @@ impl Game {
         let mut file = File::open(&path)?;
         let mut contents = String::new();
         file.read_to_string(&mut contents)?;
-        self.beatmap = Beatmap::from_osz(&contents)?;
+
+        let beatmap = Beatmap::from_osz(&contents)?;
+        self.beatmap = BeatmapExt::new(beatmap);
 
         let dir = path.parent().unwrap();
 
-        let song = Sound::create(dir.join(&self.beatmap.audio_filename))?;
+        let song = Sound::create(dir.join(&self.beatmap.inner.audio_filename))?;
         song.set_position(113.0)?;
         self.song = Some(song);
 
@@ -105,7 +107,7 @@ impl Game {
             end_time: f64,
         }
 
-        let timeline_span = 6.0 / self.beatmap.timeline_zoom;
+        let timeline_span = 6.0 / self.beatmap.inner.timeline_zoom;
         let timeline_left = time - timeline_span / 2.0;
         let timeline_right = time + timeline_span / 2.0;
         println!("left {:.3} right {:.3}", timeline_left, timeline_right);
@@ -125,13 +127,13 @@ impl Game {
         graphics::draw(ctx, &current_line, DrawParam::default())?;
 
         let mut playfield_hitobjects = Vec::new();
-        let preempt = (self.beatmap.difficulty.approach_preempt() as f64) / 1000.0;
-        let fade_in = (self.beatmap.difficulty.approach_fade_time() as f64) / 1000.0;
+        let preempt = (self.beatmap.inner.difficulty.approach_preempt() as f64) / 1000.0;
+        let fade_in = (self.beatmap.inner.difficulty.approach_fade_time() as f64) / 1000.0;
 
         // TODO: tighten this loop even more by binary searching for the start of the timeline and
         // playfield hitobjects rather than looping through the entire beatmap, better yet, just
         // keeping track of the old index will probably be much faster
-        for ho in self.beatmap.hit_objects.iter().rev() {
+        for ho in self.beatmap.inner.hit_objects.iter().rev() {
             let ho_time = (ho.start_time.0 as f64) / 1000.0;
 
             // draw in timeline
@@ -141,7 +143,7 @@ impl Game {
                 let timeline_y = TIMELINE_BOUNDS.y;
                 println!(
                     " - [{}] {:.3}-{:.3} : {:.3}%",
-                    self.beatmap.timeline_zoom,
+                    self.beatmap.inner.timeline_zoom,
                     timeline_left,
                     timeline_right,
                     timeline_percent * 100.0
@@ -173,7 +175,7 @@ impl Game {
             match ho.kind {
                 HitObjectKind::Circle => end_time = ho_time,
                 HitObjectKind::Slider(_) => {
-                    let duration = self.beatmap.get_slider_duration(ho).unwrap();
+                    let duration = self.beatmap.inner.get_slider_duration(ho).unwrap();
                     end_time = ho_time + duration / 1000.0;
                 }
                 HitObjectKind::Spinner(SpinnerInfo {
@@ -192,7 +194,7 @@ impl Game {
         let cs_scale = PLAYFIELD_BOUNDS.w / 640.0;
         let osupx_scale_x = PLAYFIELD_BOUNDS.w / 512.0;
         let osupx_scale_y = PLAYFIELD_BOUNDS.h / 384.0;
-        let cs_osupx = self.beatmap.difficulty.circle_size_osupx();
+        let cs_osupx = self.beatmap.inner.difficulty.circle_size_osupx();
         let cs_real = cs_osupx * cs_scale;
 
         for draw_info in playfield_hitobjects.iter() {
@@ -210,7 +212,7 @@ impl Game {
                     &mut self.slider_cache,
                     ctx,
                     PLAYFIELD_BOUNDS,
-                    &self.beatmap,
+                    &self.beatmap.inner,
                     ho,
                     color,
                 )?;

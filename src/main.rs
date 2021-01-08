@@ -1,5 +1,3 @@
-#![feature(vec_into_raw_parts)]
-
 #[macro_use]
 extern crate anyhow;
 #[macro_use]
@@ -7,8 +5,9 @@ extern crate log;
 extern crate bass_sys as bass;
 
 mod audio;
+mod beatmap;
 mod game;
-mod math;
+mod hit_object;
 mod skin;
 mod slider_render;
 
