@@ -6,7 +6,8 @@ use anyhow::Result;
 use ggez::{
     event::{EventHandler, KeyCode, KeyMods},
     graphics::{
-        self, DrawMode, DrawParam, FillOptions, FilterMode, Mesh, Rect, StrokeOptions, Text, WHITE,
+        self, Color, DrawMode, DrawParam, FillOptions, FilterMode, Mesh, Rect, StrokeOptions, Text,
+        WHITE,
     },
     Context, GameError, GameResult,
 };
@@ -68,6 +69,14 @@ impl Game {
 
         graphics::clear(ctx, [0.0, 0.0, 0.0, 1.0].into());
 
+        let playfield = Mesh::new_rectangle(
+            ctx,
+            DrawMode::Stroke(StrokeOptions::default()),
+            EDITOR_SCREEN,
+            Color::new(1.0, 1.0, 1.0, 0.5),
+        )?;
+        graphics::draw(ctx, &playfield, DrawParam::default())?;
+
         let time = self.song.as_ref().unwrap().position()?;
         let text = Text::new(format!("time: {}", time).as_ref());
         graphics::queue_text(ctx, &text, [0.0, 0.0], Some(WHITE));
@@ -84,7 +93,7 @@ impl Game {
 
         let osupx_scale_x = EDITOR_SCREEN.w / 512.0;
         let osupx_scale_y = EDITOR_SCREEN.h / 384.0;
-        let cs_osupx = 54.4 - 4.48 * self.beatmap.difficulty.circle_size;
+        let cs_osupx = self.beatmap.difficulty.circle_size_osupx();
         let cs_real = cs_osupx * osupx_scale_x;
 
         for ho in visible_hitobjects.iter() {

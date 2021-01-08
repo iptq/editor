@@ -1,13 +1,8 @@
-use std::collections::{HashMap, VecDeque};
-use std::mem;
-use std::sync::Arc;
+use std::collections::VecDeque;
 
 use anyhow::Result;
 use ggez::{
-    conf::NumSamples,
-    graphics::{
-        self, Canvas, Color, DrawMode, DrawParam, LineCap, LineJoin, Mesh, Rect, StrokeOptions,
-    },
+    graphics::{self, DrawMode, DrawParam, LineCap, LineJoin, Mesh, Rect, StrokeOptions},
     nalgebra::Point2,
     Context,
 };
@@ -32,7 +27,7 @@ pub fn render_slider(
 
     let osupx_scale_x = rect.w as f64 / 512.0;
     let osupx_scale_y = rect.h as f64 / 384.0;
-    let cs_osupx = 54.4 - 4.48 * beatmap.difficulty.circle_size as f64;
+    let cs_osupx = beatmap.difficulty.circle_size_osupx() as f64;
     let cs_real = cs_osupx * osupx_scale_x;
 
     let (mut boundx, mut boundy, mut boundw, mut boundh) = (0.0f64, 0.0f64, 0.0f64, 0.0f64);
@@ -75,9 +70,14 @@ fn get_spline(
     let points = control_points
         .iter()
         .map(|p| Point(p.0 as f64, p.1 as f64))
-        .collect();
+        .collect::<Vec<_>>();
     match kind {
-        SliderSplineKind::Linear => points,
+        SliderSplineKind::Linear => {
+            let start = points[0];
+            let unit = (points[1] - points[0]).norm();
+            let end = points[0] + unit * pixel_length;
+            vec![start, end]
+        }
         SliderSplineKind::Perfect => {
             let (p1, p2, p3) = (points[0], points[1], points[2]);
             let (center, radius) = Math::circumcircle(p1, p2, p3);
