@@ -167,37 +167,64 @@ impl Spline {
                 c
             }
             SliderSplineKind::Bezier => {
-                // split the curve by red-anchors
                 let mut idx = 0;
                 let mut whole = Vec::new();
+                let mut cumul_length = 0.0;
+                let mut last_circ: Option<P> = None;
+                let mut check_push = |whole: &mut Vec<P>, point: P| -> bool {
+                    if cumul_length < pixel_length {
+                        whole.push(point);
+                        if let Some(circ) = last_circ {
+                            cumul_length += circ.distance(point);
+                        }
+                        last_circ = Some(point);
+                        true
+                    } else {
+                        false
+                    }
+                };
+
+                // split the curve by red-anchors
                 for i in 1..points.len() {
                     if points[i].0 == points[i - 1].0 && points[i].1 == points[i - 1].1 {
                         let spline = calculate_bezier(&points[idx..i]);
+
+                        // check if it's equal to the last thing that was added to whole
                         if let Some(last) = whole.last() {
                             if spline[0] != *last {
-                                whole.push(spline[0]);
+                                check_push(&mut whole, spline[0]);
                             }
                         } else {
-                            whole.push(spline[0]);
+                            check_push(&mut whole, spline[0]);
                         }
+
+                        // add points, making sure no 2 are the same
                         for points in spline.windows(2) {
                             if points[0] != points[1] {
-                                whole.push(points[1]);
+                                if !check_push(&mut whole, points[1]) {
+                                    break;
+                                }
                             }
                         }
+
                         idx = i;
                         continue;
                     }
                 }
+
                 let spline = calculate_bezier(&points[idx..]);
                 if let Some(last) = whole.last() {
                     if spline[0] != *last {
-                        whole.push(spline[0]);
+                        check_push(&mut whole, spline[0]);
                     }
+                } else {
+                    check_push(&mut whole, spline[0]);
                 }
                 for points in spline.windows(2) {
                     if points[0] != points[1] {
-                        whole.push(points[1]);
+                        if !check_push(&mut whole, points[1]) {
+                            break;
+                        }
                     }
                 }
                 whole
