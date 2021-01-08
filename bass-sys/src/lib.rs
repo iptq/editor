@@ -17,7 +17,9 @@ extern_log! {
     pub fn BASS_ChannelPause(handle: DWORD) -> BOOL;
     pub fn BASS_ChannelGetLength(handle: DWORD, mode: DWORD) -> QWORD;
     pub fn BASS_ChannelGetPosition(handle: DWORD, mode: DWORD) -> QWORD;
+    pub fn BASS_ChannelSetPosition(handle: DWORD, pos: QWORD, mode: DWORD);
     pub fn BASS_ChannelBytes2Seconds(handle: DWORD, pos: QWORD) -> f64;
+    pub fn BASS_ChannelSeconds2Bytes(handle: DWORD, pos: f64) -> QWORD;
 
     pub fn BASS_GetDevice() -> DWORD;
     pub fn BASS_GetDeviceInfo(device: DWORD, info: *mut BASS_DEVICEINFO) -> BOOL;

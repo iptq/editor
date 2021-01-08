@@ -48,7 +48,10 @@ impl Game {
         self.beatmap = Beatmap::from_osz(&contents)?;
 
         let dir = path.parent().unwrap();
-        self.song = Sound::create(dir.join(&self.beatmap.audio_filename)).map(Some)?;
+
+        let song = Sound::create(dir.join(&self.beatmap.audio_filename))?;
+        song.set_position(113.0)?;
+        self.song = Some(song);
 
         Ok(())
     }
@@ -82,20 +85,40 @@ impl Game {
         graphics::queue_text(ctx, &text, [0.0, 0.0], Some(WHITE));
         graphics::draw_queued_text(ctx, DrawParam::default(), None, FilterMode::Linear)?;
 
+        struct DrawInfo<'a> {
+            hit_object: &'a HitObject,
+            opacity: f64,
+            end_time: f64,
+        }
+
         let mut visible_hitobjects = Vec::new();
-        let approach_time = 0.75;
+        let preempt = (self.beatmap.difficulty.approach_preempt() as f64) / 1000.0;
+        let fade_in = (self.beatmap.difficulty.approach_fade_time() as f64) / 1000.0;
         for ho in self.beatmap.hit_objects.iter() {
             let ho_time = (ho.start_time.0 as f64) / 1000.0;
-            let end_time = match ho.kind {
-                HitObjectKind::Circle => ho_time,
+            let end_time;
+            let opacity = if time > ho_time - fade_in {
+                1.0
+            } else {
+                // TODO: calculate ease
+                (time - (ho_time - preempt)) / fade_in
+            };
+            match ho.kind {
+                HitObjectKind::Circle => end_time = ho_time,
                 HitObjectKind::Slider(_) => {
                     let duration = self.beatmap.get_slider_duration(ho).unwrap();
-                    ho_time + duration / 1000.0
+                    end_time = ho_time + duration / 1000.0;
                 }
-                HitObjectKind::Spinner(SpinnerInfo { end_time }) => (end_time.0 as f64) / 1000.0,
+                HitObjectKind::Spinner(SpinnerInfo {
+                    end_time: spinner_end,
+                }) => end_time = (spinner_end.0 as f64) / 1000.0,
             };
-            if ho_time - approach_time < time && time < end_time {
-                visible_hitobjects.push(ho);
+            if ho_time - preempt < time && time < end_time {
+                visible_hitobjects.push(DrawInfo {
+                    hit_object: ho,
+                    opacity,
+                    end_time,
+                });
             }
         }
 
@@ -104,15 +127,18 @@ impl Game {
         let cs_osupx = self.beatmap.difficulty.circle_size_osupx();
         let cs_real = cs_osupx * osupx_scale_x;
 
-        for ho in visible_hitobjects.iter() {
+        for draw_info in visible_hitobjects.iter() {
+            let ho = draw_info.hit_object;
             let ho_time = (ho.start_time.0 as f64) / 1000.0;
             let pos = [
                 EDITOR_SCREEN.x + osupx_scale_x * ho.pos.0 as f32,
                 EDITOR_SCREEN.y + osupx_scale_y * ho.pos.1 as f32,
             ];
+            let color = graphics::Color::new(1.0, 1.0, 1.0, draw_info.opacity as f32);
 
             if let HitObjectKind::Slider(_) = ho.kind {
-                render_slider(ctx, EDITOR_SCREEN, &self.beatmap, ho)?;
+                let color = graphics::Color::new(1.0, 1.0, 1.0, 0.6 * draw_info.opacity as f32);
+                render_slider(ctx, EDITOR_SCREEN, &self.beatmap, ho, color)?;
             }
 
             let circ = Mesh::new_circle(
@@ -121,21 +147,23 @@ impl Game {
                 pos,
                 cs_real,
                 1.0,
-                WHITE,
+                color,
             )?;
             graphics::draw(ctx, &circ, DrawParam::default())?;
 
-            let time_diff = ho_time - time;
-            let approach_r = cs_real * (1.0 + 2.0 * time_diff as f32 / 0.75);
-            let approach = Mesh::new_circle(
-                ctx,
-                DrawMode::Stroke(StrokeOptions::default()),
-                pos,
-                approach_r,
-                1.0,
-                WHITE,
-            )?;
-            graphics::draw(ctx, &approach, DrawParam::default())?;
+            if time < ho_time {
+                let time_diff = ho_time - time;
+                let approach_r = cs_real * (1.0 + 2.0 * time_diff as f32 / 0.75);
+                let approach = Mesh::new_circle(
+                    ctx,
+                    DrawMode::Stroke(StrokeOptions::default().with_line_width(2.0)),
+                    pos,
+                    approach_r,
+                    1.0,
+                    WHITE,
+                )?;
+                graphics::draw(ctx, &approach, DrawParam::default())?;
+            }
         }
 
         graphics::present(ctx)?;

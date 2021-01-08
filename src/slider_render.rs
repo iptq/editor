@@ -17,6 +17,7 @@ pub fn render_slider(
     rect: Rect,
     beatmap: &Beatmap,
     slider: &HitObject,
+    color: Color,
 ) -> Result<()> {
     let mut control_points = vec![slider.pos];
     let slider_info = match &slider.kind {
@@ -62,12 +63,7 @@ pub fn render_slider(
         .with_line_cap(LineCap::Round)
         .with_line_join(LineJoin::Round)
         .with_line_width(cs_real as f32 * 2.0);
-    let body = Mesh::new_polyline(
-        ctx,
-        DrawMode::Stroke(opts),
-        &spline_mapped,
-        Color::new(1.0, 1.0, 1.0, 0.5),
-    )?;
+    let body = Mesh::new_polyline(ctx, DrawMode::Stroke(opts), &spline_mapped, color)?;
     graphics::draw(ctx, &body, DrawParam::default())?;
 
     let frame = Mesh::new_polyline(
@@ -153,11 +149,12 @@ fn get_spline(
             c
         }
         SliderSplineKind::Bezier => {
+            // split the curve by red-anchors
             let mut idx = 0;
             let mut whole = Vec::new();
             for i in 1..points.len() {
                 if points[i].0 == points[i - 1].0 && points[i].1 == points[i - 1].1 {
-                    let spline = calculate_bezier(&points[idx..i - 1]);
+                    let spline = calculate_bezier(&points[idx..i]);
                     whole.extend(spline);
                     idx = i;
                     continue;

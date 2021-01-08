@@ -76,4 +76,12 @@ impl Sound {
         };
         Ok(time)
     }
+
+    pub fn set_position(&self, pos: f64) -> Result<()> {
+        unsafe {
+            let pos_bytes = bass::BASS_ChannelSeconds2Bytes(self.handle, pos);
+            bass::BASS_ChannelSetPosition(self.handle, pos_bytes, BASS_POS_BYTE);
+        }
+        Ok(())
+    }
 }
