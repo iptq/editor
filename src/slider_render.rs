@@ -22,7 +22,7 @@ pub fn render_slider(
     let mut control_points = vec![slider.pos];
     let slider_info = match &slider.kind {
         HitObjectKind::Slider(info) => info,
-        _ => panic!("retard"),
+        _ => unreachable!("retard"),
     };
     control_points.extend(&slider_info.control);
 

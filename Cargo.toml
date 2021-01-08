@@ -19,4 +19,4 @@ num = "0.3.1"
 
 [dependencies.libosu]
 git = "https://github.com/iptq/libosu"
-rev = "95a87c57e1075ffab473124d9564233028e79423"
+rev = "fa82d6b167c648ad3f68efa3005aa8f7af12d943"
