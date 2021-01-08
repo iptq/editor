@@ -35,11 +35,12 @@ fn main() -> Result<()> {
         .window_setup(WindowSetup::default().title("OSU editor"))
         .window_mode(WindowMode::default().dimensions(1024.0, 768.0));
 
-    let (ctx, event_loop) = &mut cb.build()?;
+    let (mut ctx, mut event_loop) = cb.build()?;
     let mut game = Game::new()?;
+    game.skin.load_all(&mut ctx)?;
     let path = env::args().nth(1).unwrap();
     game.load_beatmap(path)?;
-    event::run(ctx, event_loop, &mut game)?;
+    event::run(&mut ctx, &mut event_loop, &mut game)?;
 
     Ok(())
 }

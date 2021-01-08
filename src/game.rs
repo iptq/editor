@@ -26,8 +26,8 @@ pub struct Game {
     song: Option<Sound>,
     beatmap: Beatmap,
     hit_objects: Vec<HitObject>,
-    skin: Skin,
-
+    pub skin: Skin,
+    frame: usize,
     slider_cache: SliderCache,
 }
 
@@ -45,6 +45,7 @@ impl Game {
             hit_objects,
             song: None,
             skin,
+            frame: 0,
             slider_cache: SliderCache::default(),
         })
     }
@@ -60,7 +61,7 @@ impl Game {
         let dir = path.parent().unwrap();
 
         let song = Sound::create(dir.join(&self.beatmap.audio_filename))?;
-        // song.set_position(36.5)?;
+        song.set_position(113.0)?;
         self.song = Some(song);
 
         Ok(())
@@ -79,6 +80,7 @@ impl Game {
     fn priv_draw(&mut self, ctx: &mut Context) -> Result<()> {
         // TODO: lol
         const PLAYFIELD_BOUNDS: Rect = Rect::new(112.0, 112.0, 800.0, 600.0);
+        const SEEKER_BOUNDS: Rect = Rect::new(46.0, 722.0, 932.0, 36.0);
 
         graphics::clear(ctx, [0.0, 0.0, 0.0, 1.0].into());
 
@@ -176,15 +178,21 @@ impl Game {
                         PLAYFIELD_BOUNDS.x + osupx_scale_x * pos.0 as f32,
                         PLAYFIELD_BOUNDS.y + osupx_scale_y * pos.1 as f32,
                     ];
-                    let ball = Mesh::new_circle(
+                    self.skin.sliderb.draw_frame(
                         ctx,
-                        DrawMode::Fill(FillOptions::default()),
-                        ball_pos,
-                        cs_real,
-                        1.0,
-                        graphics::WHITE,
+                        (cs_real * 2.0, cs_real * 2.0),
+                        DrawParam::default().dest(ball_pos),
+                        (travel_percent / 0.25) as usize,
                     )?;
-                    graphics::draw(ctx, &ball, DrawParam::default())?;
+                    // let ball = Mesh::new_circle(
+                    //     ctx,
+                    //     DrawMode::Fill(FillOptions::default()),
+                    //     ball_pos,
+                    //     cs_real,
+                    //     1.0,
+                    //     graphics::WHITE,
+                    // )?;
+                    // graphics::draw(ctx, &ball, DrawParam::default())?;
                 }
             }
 
@@ -212,6 +220,7 @@ impl Game {
         }
 
         graphics::present(ctx)?;
+        self.frame += 1;
         Ok(())
     }
 }
