@@ -559,6 +559,7 @@ dependencies = [
  "libosu",
  "log",
  "num",
+ "ordered-float 2.0.1",
  "stderrlog",
 ]
 
@@ -891,7 +892,7 @@ checksum = "5fca6f9d679bff1322c76c9a1ad4b8553b30a94f3f75bea6936e19032c2f2ec3"
 dependencies = [
  "glyph_brush_layout",
  "log",
- "ordered-float",
+ "ordered-float 1.1.1",
  "rustc-hash",
  "rusttype 0.8.3",
  "twox-hash",
@@ -1486,6 +1487,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "ordered-float"
+version = "2.0.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "dacdec97876ef3ede8c50efc429220641a0b11ba0048b4b0c357bccbc47c5204"
+dependencies = [
+ "num-traits 0.2.14",
+]
+
+[[package]]
 name = "osmesa-sys"
 version = "0.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1909,7 +1919,7 @@ dependencies = [
  "crossbeam-utils 0.7.2",
  "linked-hash-map",
  "num_cpus",
- "ordered-float",
+ "ordered-float 1.1.1",
  "rustc-hash",
  "stb_truetype",
 ]

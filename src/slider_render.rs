@@ -9,16 +9,19 @@ use ggez::{
     Context,
 };
 use libosu::{Beatmap, HitObject, HitObjectKind, Point, SliderSplineKind};
+use ordered_float::NotNan;
 
+use crate::game::SliderCache;
 use crate::math::Math;
 
-pub fn render_slider(
+pub fn render_slider<'a>(
+    slider_cache: &'a mut SliderCache,
     ctx: &mut Context,
     rect: Rect,
     beatmap: &Beatmap,
     slider: &HitObject,
     color: Color,
-) -> Result<()> {
+) -> Result<&'a Spline> {
     let mut control_points = vec![slider.pos];
     let slider_info = match &slider.kind {
         HitObjectKind::Slider(info) => info,
@@ -26,7 +29,14 @@ pub fn render_slider(
     };
     control_points.extend(&slider_info.control);
 
-    let spline = get_spline(&slider_info.kind, &control_points, slider_info.pixel_length);
+    let spline = if slider_cache.contains_key(&control_points) {
+        slider_cache.get(&control_points).unwrap()
+    } else {
+        let new_spline =
+            Spline::from_control(&slider_info.kind, &control_points, slider_info.pixel_length);
+        slider_cache.insert(control_points.clone(), new_spline);
+        slider_cache.get(&control_points).unwrap()
+    };
 
     let osupx_scale_x = rect.w as f64 / 512.0;
     let osupx_scale_y = rect.h as f64 / 384.0;
@@ -45,6 +55,7 @@ pub fn render_slider(
 
     let (mut boundx, mut boundy, mut boundw, mut boundh) = (0.0f64, 0.0f64, 0.0f64, 0.0f64);
     let spline_mapped = spline
+        .spline_points
         .iter()
         .map(|point| {
             let (x, y) = (point.0, point.1);
@@ -85,86 +96,131 @@ pub fn render_slider(
         graphics::draw(ctx, &rect, DrawParam::default())?;
     }
 
-    Ok(())
+    Ok(spline)
 }
 
-fn get_spline(
-    kind: &SliderSplineKind,
-    control_points: &[Point<i32>],
-    pixel_length: f64,
-) -> Vec<Point<f64>> {
-    // no matter what, if there's 2 control points, it's linear
-    let mut kind = kind.clone();
-    if control_points.len() == 2 {
-        kind = SliderSplineKind::Linear;
+pub struct Spline {
+    spline_points: Vec<P>,
+    cumulative_lengths: Vec<NotNan<f64>>,
+}
+
+impl Spline {
+    fn from_control(
+        kind: &SliderSplineKind,
+        control_points: &[Point<i32>],
+        pixel_length: f64,
+    ) -> Self {
+        // no matter what, if there's 2 control points, it's linear
+        let mut kind = kind.clone();
+        if control_points.len() == 2 {
+            kind = SliderSplineKind::Linear;
+        }
+
+        let points = control_points
+            .iter()
+            .map(|p| Point(p.0 as f64, p.1 as f64))
+            .collect::<Vec<_>>();
+        let spline_points = match kind {
+            SliderSplineKind::Linear => {
+                let start = points[0];
+                let unit = (points[1] - points[0]).norm();
+                let end = points[0] + unit * pixel_length;
+                vec![start, end]
+            }
+            SliderSplineKind::Perfect => {
+                let (p1, p2, p3) = (points[0], points[1], points[2]);
+                let (center, radius) = Math::circumcircle(p1, p2, p3);
+
+                // find the t-values of the start and end of the slider
+                let t0 = (center.1 - p1.1).atan2(p1.0 - center.0);
+                let mut mid = (center.1 - p2.1).atan2(p2.0 - center.0);
+                let mut t1 = (center.1 - p3.1).atan2(p3.0 - center.0);
+
+                // make sure t0 is less than t1
+                while mid < t0 {
+                    mid += std::f64::consts::TAU;
+                }
+                while t1 < t0 {
+                    t1 += std::f64::consts::TAU;
+                }
+                if mid > t1 {
+                    t1 -= std::f64::consts::TAU;
+                }
+
+                // circumference is 2 * pi * r, slider length over circumference is length/(2 * pi * r)
+                let direction_unit = (t1 - t0) / (t1 - t0).abs();
+                let new_t1 = t0 + direction_unit * (pixel_length / radius);
+
+                let mut t = t0;
+                let mut c = Vec::new();
+                loop {
+                    if !((new_t1 >= t0 && t < new_t1) || (new_t1 < t0 && t > new_t1)) {
+                        break;
+                    }
+
+                    let rel = Point(t.cos() * radius, -t.sin() * radius);
+                    c.push(center + rel);
+
+                    t += (new_t1 - t0) / pixel_length;
+                }
+                c
+            }
+            SliderSplineKind::Bezier => {
+                // split the curve by red-anchors
+                let mut idx = 0;
+                let mut whole = Vec::new();
+                for i in 1..points.len() {
+                    if points[i].0 == points[i - 1].0 && points[i].1 == points[i - 1].1 {
+                        let spline = calculate_bezier(&points[idx..i]);
+                        whole.extend(spline);
+                        idx = i;
+                        continue;
+                    }
+                }
+                let spline = calculate_bezier(&points[idx..]);
+                whole.extend(spline);
+                whole
+            }
+            _ => todo!(),
+        };
+
+        let mut cumulative_lengths = Vec::with_capacity(spline_points.len());
+        let mut curr = 0.0;
+        cumulative_lengths.push(unsafe { NotNan::unchecked_new(curr) });
+        for points in spline_points.windows(2) {
+            let dist = points[0].distance(points[1]);
+            curr += dist;
+            cumulative_lengths.push(unsafe { NotNan::unchecked_new(curr) });
+        }
+
+        Spline {
+            spline_points,
+            cumulative_lengths,
+        }
     }
 
-    let points = control_points
-        .iter()
-        .map(|p| Point(p.0 as f64, p.1 as f64))
-        .collect::<Vec<_>>();
-    match kind {
-        SliderSplineKind::Linear => {
-            let start = points[0];
-            let unit = (points[1] - points[0]).norm();
-            let end = points[0] + unit * pixel_length;
-            vec![start, end]
-        }
-        SliderSplineKind::Perfect => {
-            let (p1, p2, p3) = (points[0], points[1], points[2]);
-            let (center, radius) = Math::circumcircle(p1, p2, p3);
-
-            // find the t-values of the start and end of the slider
-            let t0 = (center.1 - p1.1).atan2(p1.0 - center.0);
-            let mut mid = (center.1 - p2.1).atan2(p2.0 - center.0);
-            let mut t1 = (center.1 - p3.1).atan2(p3.0 - center.0);
-
-            // make sure t0 is less than t1
-            while mid < t0 {
-                mid += std::f64::consts::TAU;
-            }
-            while t1 < t0 {
-                t1 += std::f64::consts::TAU;
-            }
-            if mid > t1 {
-                t1 -= std::f64::consts::TAU;
-            }
-
-            // circumference is 2 * pi * r, slider length over circumference is length/(2 * pi * r)
-            let direction_unit = (t1 - t0) / (t1 - t0).abs();
-            let new_t1 = t0 + direction_unit * (pixel_length / radius);
-
-            let mut t = t0;
-            let mut c = Vec::new();
-            loop {
-                if !((new_t1 >= t0 && t < new_t1) || (new_t1 < t0 && t > new_t1)) {
-                    break;
+    pub fn position_at_length(&self, length: f64) -> P {
+        let length_notnan = unsafe { NotNan::unchecked_new(length) };
+        match self.cumulative_lengths.binary_search(&length_notnan) {
+            Ok(idx) => self.spline_points[idx],
+            Err(idx) => {
+                let n = self.spline_points.len() - 1;
+                if idx == 0 && self.spline_points.len() > 2 {
+                    return self.spline_points[0];
+                } else if idx >= n {
+                    return self.spline_points[n];
                 }
 
-                let rel = Point(t.cos() * radius, -t.sin() * radius);
-                c.push(center + rel);
+                let (len1, len2) = (
+                    self.cumulative_lengths[idx].into_inner(),
+                    self.cumulative_lengths[idx + 1].into_inner(),
+                );
+                let proportion = (length - len1) / (len2 - len1);
 
-                t += (new_t1 - t0) / pixel_length;
+                let (p1, p2) = (self.spline_points[idx], self.spline_points[idx + 1]);
+                (p2 - p1) * proportion + p1
             }
-            c
         }
-        SliderSplineKind::Bezier => {
-            // split the curve by red-anchors
-            let mut idx = 0;
-            let mut whole = Vec::new();
-            for i in 1..points.len() {
-                if points[i].0 == points[i - 1].0 && points[i].1 == points[i - 1].1 {
-                    let spline = calculate_bezier(&points[idx..i]);
-                    whole.extend(spline);
-                    idx = i;
-                    continue;
-                }
-            }
-            let spline = calculate_bezier(&points[idx..]);
-            whole.extend(spline);
-            whole
-        }
-        _ => todo!(),
     }
 }
 

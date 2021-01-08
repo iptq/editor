@@ -1,0 +1,4 @@
+- stacking
+- fix the overlaps in notch hell slider (circle size wrong?)
+- don't draw overlaps between slider segments
+- use skin components

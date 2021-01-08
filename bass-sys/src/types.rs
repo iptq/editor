@@ -1,4 +1,4 @@
-pub use std::os::raw::{c_char, c_float, c_int, c_uint, c_ulong, c_void};
+pub use std::os::raw::*;
 
 pub type DWORD = c_uint;
 pub type QWORD = c_ulong;

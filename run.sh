@@ -1,4 +1,4 @@
 #!/bin/bash
 export LD_LIBRARY_PATH=$(pwd)/bass-sys/linux/bass24/x64
 echo $LD_LIBRARY_PATH
-exec cargo run "$@"
+exec cargo run --release "$@"

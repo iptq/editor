@@ -24,12 +24,6 @@ impl<T: Float> Math<T> {
             / d;
 
         let center = Point(ux, uy);
-        (center, Self::distance(center, p1))
-    }
-
-    pub fn distance(p1: Point<T>, p2: Point<T>) -> T {
-        let dx = p2.0 - p1.0;
-        let dy = p2.1 - p1.1;
-        (dx * dx + dy * dy).sqrt()
+        (center, center.distance(p1))
     }
 }

@@ -84,4 +84,12 @@ impl Sound {
         }
         Ok(())
     }
+
+    pub fn set_playback_rate(&self, rate: f64) {
+        unsafe {
+            let mut val = 0.0f32;
+            bass::BASS_ChannelGetAttribute(self.handle, BASS_ATTRIB_FREQ, &mut val as *mut _);
+            bass::BASS_ChannelSetAttribute(self.handle, BASS_ATTRIB_FREQ, val * rate as f32);
+        }
+    }
 }

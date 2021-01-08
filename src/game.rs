@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::fs::File;
 use std::io::Read;
 use std::path::Path;
@@ -11,10 +12,12 @@ use ggez::{
     },
     Context, GameError, GameResult,
 };
-use libosu::{Beatmap, HitObject, HitObjectKind, SpinnerInfo};
+use libosu::{Beatmap, HitObject, HitObjectKind, Point, SpinnerInfo};
 
 use crate::audio::{AudioEngine, Sound};
-use crate::slider_render::render_slider;
+use crate::slider_render::{render_slider, Spline};
+
+pub type SliderCache = HashMap<Vec<Point<i32>>, Spline>;
 
 pub struct Game {
     is_playing: bool,
@@ -22,6 +25,8 @@ pub struct Game {
     song: Option<Sound>,
     beatmap: Beatmap,
     hit_objects: Vec<HitObject>,
+
+    slider_cache: SliderCache,
 }
 
 impl Game {
@@ -36,6 +41,7 @@ impl Game {
             beatmap,
             hit_objects,
             song: None,
+            slider_cache: SliderCache::default(),
         })
     }
 
@@ -51,6 +57,7 @@ impl Game {
 
         let song = Sound::create(dir.join(&self.beatmap.audio_filename))?;
         song.set_position(113.0)?;
+        song.set_playback_rate(0.6);
         self.song = Some(song);
 
         Ok(())
@@ -136,9 +143,44 @@ impl Game {
             ];
             let color = graphics::Color::new(1.0, 1.0, 1.0, draw_info.opacity as f32);
 
-            if let HitObjectKind::Slider(_) = ho.kind {
+            if let HitObjectKind::Slider(info) = &ho.kind {
                 let color = graphics::Color::new(1.0, 1.0, 1.0, 0.6 * draw_info.opacity as f32);
-                render_slider(ctx, EDITOR_SCREEN, &self.beatmap, ho, color)?;
+                let spline = render_slider(
+                    &mut self.slider_cache,
+                    ctx,
+                    EDITOR_SCREEN,
+                    &self.beatmap,
+                    ho,
+                    color,
+                )?;
+
+                if time > ho_time && time < draw_info.end_time {
+                    let elapsed_time = time - ho_time;
+                    let total_duration = draw_info.end_time - ho_time;
+                    let single_duration = total_duration / info.num_repeats as f64;
+                    let finished_repeats = (elapsed_time / single_duration).floor();
+                    let this_repeat_time = elapsed_time - finished_repeats * single_duration;
+                    let mut travel_percent = this_repeat_time / single_duration;
+                    // reverse direction on odd trips
+                    if finished_repeats as u32 % 2 == 1 {
+                        travel_percent = 1.0 - travel_percent;
+                    }
+                    let travel_length = travel_percent * info.pixel_length;
+                    let pos = spline.position_at_length(travel_length);
+                    let ball_pos = [
+                        EDITOR_SCREEN.x + osupx_scale_x * pos.0 as f32,
+                        EDITOR_SCREEN.y + osupx_scale_y * pos.1 as f32,
+                    ];
+                    let ball = Mesh::new_circle(
+                        ctx,
+                        DrawMode::Fill(FillOptions::default()),
+                        ball_pos,
+                        cs_real,
+                        1.0,
+                        graphics::WHITE,
+                    )?;
+                    graphics::draw(ctx, &ball, DrawParam::default())?;
+                }
             }
 
             let circ = Mesh::new_circle(

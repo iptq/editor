@@ -12,14 +12,16 @@ extern_log! {
     pub fn BASS_GetConfig(option: DWORD) -> DWORD;
 
     pub fn BASS_ChannelGetDevice(handle: DWORD) -> DWORD;
+    pub fn BASS_ChannelGetAttribute(handle:DWORD, attrib:DWORD, value:*mut c_float);
+    pub fn BASS_ChannelSetAttribute(handle:DWORD, attrib:DWORD, value:c_float);
     pub fn BASS_ChannelSetDevice(handle: DWORD, device: DWORD) -> BOOL;
     pub fn BASS_ChannelPlay(handle: DWORD, restart: BOOL) -> BOOL;
     pub fn BASS_ChannelPause(handle: DWORD) -> BOOL;
     pub fn BASS_ChannelGetLength(handle: DWORD, mode: DWORD) -> QWORD;
     pub fn BASS_ChannelGetPosition(handle: DWORD, mode: DWORD) -> QWORD;
     pub fn BASS_ChannelSetPosition(handle: DWORD, pos: QWORD, mode: DWORD);
-    pub fn BASS_ChannelBytes2Seconds(handle: DWORD, pos: QWORD) -> f64;
-    pub fn BASS_ChannelSeconds2Bytes(handle: DWORD, pos: f64) -> QWORD;
+    pub fn BASS_ChannelBytes2Seconds(handle: DWORD, pos: QWORD) -> c_double;
+    pub fn BASS_ChannelSeconds2Bytes(handle: DWORD, pos: c_double) -> QWORD;
 
     pub fn BASS_GetDevice() -> DWORD;
     pub fn BASS_GetDeviceInfo(device: DWORD, info: *mut BASS_DEVICEINFO) -> BOOL;

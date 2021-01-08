@@ -9,6 +9,7 @@ extern crate bass_sys as bass;
 mod audio;
 mod game;
 mod math;
+mod skin;
 mod slider_render;
 
 use std::env;
