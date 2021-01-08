@@ -38,10 +38,11 @@ pub fn render_slider<'a>(
         slider_cache.get(&control_points).unwrap()
     };
 
+    let cs_scale = rect.w / 640.0;
     let osupx_scale_x = rect.w as f64 / 512.0;
     let osupx_scale_y = rect.h as f64 / 384.0;
     let cs_osupx = beatmap.difficulty.circle_size_osupx() as f64;
-    let cs_real = cs_osupx * osupx_scale_x;
+    let cs_real = cs_osupx * cs_scale as f64;
 
     let points_mapped = control_points
         .iter()
@@ -172,13 +173,33 @@ impl Spline {
                 for i in 1..points.len() {
                     if points[i].0 == points[i - 1].0 && points[i].1 == points[i - 1].1 {
                         let spline = calculate_bezier(&points[idx..i]);
-                        whole.extend(spline);
+                        if let Some(last) = whole.last() {
+                            if spline[0] != *last {
+                                whole.push(spline[0]);
+                            }
+                        } else {
+                            whole.push(spline[0]);
+                        }
+                        for points in spline.windows(2) {
+                            if points[0] != points[1] {
+                                whole.push(points[1]);
+                            }
+                        }
                         idx = i;
                         continue;
                     }
                 }
                 let spline = calculate_bezier(&points[idx..]);
-                whole.extend(spline);
+                if let Some(last) = whole.last() {
+                    if spline[0] != *last {
+                        whole.push(spline[0]);
+                    }
+                }
+                for points in spline.windows(2) {
+                    if points[0] != points[1] {
+                        whole.push(points[1]);
+                    }
+                }
                 whole
             }
             _ => todo!(),
@@ -186,6 +207,8 @@ impl Spline {
 
         let mut cumulative_lengths = Vec::with_capacity(spline_points.len());
         let mut curr = 0.0;
+        // using NotNan here because these need to be binary-searched over
+        // and f64 isn't Ord
         cumulative_lengths.push(unsafe { NotNan::unchecked_new(curr) });
         for points in spline_points.windows(2) {
             let dist = points[0].distance(points[1]);
@@ -199,7 +222,7 @@ impl Spline {
         }
     }
 
-    pub fn position_at_length(&self, length: f64) -> P {
+    pub fn point_at_length(&self, length: f64) -> P {
         let length_notnan = unsafe { NotNan::unchecked_new(length) };
         match self.cumulative_lengths.binary_search(&length_notnan) {
             Ok(idx) => self.spline_points[idx],
@@ -212,12 +235,13 @@ impl Spline {
                 }
 
                 let (len1, len2) = (
+                    self.cumulative_lengths[idx - 1].into_inner(),
                     self.cumulative_lengths[idx].into_inner(),
-                    self.cumulative_lengths[idx + 1].into_inner(),
                 );
                 let proportion = (length - len1) / (len2 - len1);
 
                 let (p1, p2) = (self.spline_points[idx], self.spline_points[idx + 1]);
+                assert!(p1 != p2);
                 (p2 - p1) * proportion + p1
             }
         }

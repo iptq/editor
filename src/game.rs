@@ -57,7 +57,6 @@ impl Game {
 
         let song = Sound::create(dir.join(&self.beatmap.audio_filename))?;
         song.set_position(113.0)?;
-        song.set_playback_rate(0.6);
         self.song = Some(song);
 
         Ok(())
@@ -129,10 +128,11 @@ impl Game {
             }
         }
 
+        let cs_scale = EDITOR_SCREEN.w / 640.0;
         let osupx_scale_x = EDITOR_SCREEN.w / 512.0;
         let osupx_scale_y = EDITOR_SCREEN.h / 384.0;
         let cs_osupx = self.beatmap.difficulty.circle_size_osupx();
-        let cs_real = cs_osupx * osupx_scale_x;
+        let cs_real = cs_osupx * cs_scale;
 
         for draw_info in visible_hitobjects.iter() {
             let ho = draw_info.hit_object;
@@ -166,7 +166,7 @@ impl Game {
                         travel_percent = 1.0 - travel_percent;
                     }
                     let travel_length = travel_percent * info.pixel_length;
-                    let pos = spline.position_at_length(travel_length);
+                    let pos = spline.point_at_length(travel_length);
                     let ball_pos = [
                         EDITOR_SCREEN.x + osupx_scale_x * pos.0 as f32,
                         EDITOR_SCREEN.y + osupx_scale_y * pos.1 as f32,
