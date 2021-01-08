@@ -10,7 +10,6 @@ use ggez::{
         self, Color, DrawMode, DrawParam, FillOptions, FilterMode, Mesh, Rect, StrokeOptions, Text,
         WHITE,
     },
-    nalgebra::Point2,
     Context, GameError, GameResult,
 };
 use libosu::{Beatmap, HitObject, HitObjectKind, Point, SpinnerInfo};
@@ -61,7 +60,7 @@ impl Game {
         let dir = path.parent().unwrap();
 
         let song = Sound::create(dir.join(&self.beatmap.audio_filename))?;
-        song.set_position(36.5)?;
+        // song.set_position(36.5)?;
         self.song = Some(song);
 
         Ok(())
@@ -139,7 +138,7 @@ impl Game {
         let cs_osupx = self.beatmap.difficulty.circle_size_osupx();
         let cs_real = cs_osupx * cs_scale;
 
-        for draw_info in visible_hitobjects.iter() {
+        for draw_info in visible_hitobjects.iter().rev() {
             let ho = draw_info.hit_object;
             let ho_time = (ho.start_time.0 as f64) / 1000.0;
             let pos = [
@@ -171,7 +170,7 @@ impl Game {
                         travel_percent = 1.0 - travel_percent;
                     }
                     let travel_length = travel_percent * info.pixel_length;
-                    print!("ho={:.3} ", ho_time);
+                    // print!("ho={:.3} ", ho_time);
                     let pos = spline.point_at_length(travel_length);
                     let ball_pos = [
                         PLAYFIELD_BOUNDS.x + osupx_scale_x * pos.0 as f32,

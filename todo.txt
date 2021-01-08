@@ -1,5 +1,4 @@
 - stacking
-- fix straight slider segment teleportation
 - don't draw overlaps between slider segments
 - use skin components
 - timeline

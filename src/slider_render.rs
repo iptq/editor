@@ -227,9 +227,11 @@ impl Spline {
         match self.cumulative_lengths.binary_search(&length_notnan) {
             Ok(idx) => self.spline_points[idx],
             Err(idx) => {
-                let n = self.spline_points.len() - 1;
+                let n = self.spline_points.len();
                 if idx == 0 && self.spline_points.len() > 2 {
                     return self.spline_points[0];
+                } else if idx == n {
+                    return self.spline_points[n - 1];
                 }
 
                 let (len1, len2) = (
