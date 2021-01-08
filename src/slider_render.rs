@@ -2,7 +2,9 @@ use std::collections::VecDeque;
 
 use anyhow::Result;
 use ggez::{
-    graphics::{self, DrawMode, DrawParam, LineCap, LineJoin, Mesh, Rect, StrokeOptions},
+    graphics::{
+        self, Color, DrawMode, DrawParam, FillOptions, LineCap, LineJoin, Mesh, Rect, StrokeOptions,
+    },
     nalgebra::Point2,
     Context,
 };
@@ -30,6 +32,16 @@ pub fn render_slider(
     let cs_osupx = beatmap.difficulty.circle_size_osupx() as f64;
     let cs_real = cs_osupx * osupx_scale_x;
 
+    let points_mapped = control_points
+        .iter()
+        .map(|point| {
+            let (x, y) = (point.0 as f64, point.1 as f64);
+            let x2 = rect.x as f64 + osupx_scale_x * x;
+            let y2 = rect.y as f64 + osupx_scale_y * y;
+            [x2 as f32, y2 as f32].into()
+        })
+        .collect::<Vec<Point2<_>>>();
+
     let (mut boundx, mut boundy, mut boundw, mut boundh) = (0.0f64, 0.0f64, 0.0f64, 0.0f64);
     let spline_mapped = spline
         .iter()
@@ -50,8 +62,32 @@ pub fn render_slider(
         .with_line_cap(LineCap::Round)
         .with_line_join(LineJoin::Round)
         .with_line_width(cs_real as f32 * 2.0);
-    let mesh = Mesh::new_polyline(ctx, DrawMode::Stroke(opts), &spline_mapped, graphics::WHITE)?;
-    graphics::draw(ctx, &mesh, DrawParam::default())?;
+    let body = Mesh::new_polyline(
+        ctx,
+        DrawMode::Stroke(opts),
+        &spline_mapped,
+        Color::new(1.0, 1.0, 1.0, 0.5),
+    )?;
+    graphics::draw(ctx, &body, DrawParam::default())?;
+
+    let frame = Mesh::new_polyline(
+        ctx,
+        DrawMode::Stroke(StrokeOptions::default()),
+        &points_mapped,
+        graphics::WHITE,
+    )?;
+    graphics::draw(ctx, &frame, DrawParam::default())?;
+    for point in points_mapped {
+        let size = 5.0;
+        let rect = Rect::new(point.x - size, point.y - size, size * 2.0, size * 2.0);
+        let rect = Mesh::new_rectangle(
+            ctx,
+            DrawMode::Fill(FillOptions::default()),
+            rect,
+            graphics::WHITE,
+        )?;
+        graphics::draw(ctx, &rect, DrawParam::default())?;
+    }
 
     Ok(())
 }
@@ -84,18 +120,21 @@ fn get_spline(
 
             // find the t-values of the start and end of the slider
             let t0 = (center.1 - p1.1).atan2(p1.0 - center.0);
+            let mut mid = (center.1 - p2.1).atan2(p2.0 - center.0);
             let mut t1 = (center.1 - p3.1).atan2(p3.0 - center.0);
 
             // make sure t0 is less than t1
-            let mut mid = (center.1 - p2.1).atan2(p2.0 - center.0);
             while mid < t0 {
-                mid += 2.0 * std::f64::consts::PI
+                mid += std::f64::consts::TAU;
             }
-            while t1 < mid {
-                t1 += 2.0 * std::f64::consts::PI
+            while t1 < t0 {
+                t1 += std::f64::consts::TAU;
+            }
+            if mid > t1 {
+                t1 -= std::f64::consts::TAU;
             }
 
-            // circumference is 2*pi*r, slider length over circumference is length/(2*pi*r)
+            // circumference is 2 * pi * r, slider length over circumference is length/(2 * pi * r)
             let direction_unit = (t1 - t0) / (t1 - t0).abs();
             let new_t1 = t0 + direction_unit * (pixel_length / radius);
 

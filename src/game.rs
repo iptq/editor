@@ -11,7 +11,7 @@ use ggez::{
     },
     Context, GameError, GameResult,
 };
-use libosu::{Beatmap, HitObject, HitObjectKind};
+use libosu::{Beatmap, HitObject, HitObjectKind, SpinnerInfo};
 
 use crate::audio::{AudioEngine, Sound};
 use crate::slider_render::render_slider;
@@ -86,7 +86,15 @@ impl Game {
         let approach_time = 0.75;
         for ho in self.beatmap.hit_objects.iter() {
             let ho_time = (ho.start_time.0 as f64) / 1000.0;
-            if ho_time - approach_time < time && ho_time > time {
+            let end_time = match ho.kind {
+                HitObjectKind::Circle => ho_time,
+                HitObjectKind::Slider(_) => {
+                    let duration = self.beatmap.get_slider_duration(ho).unwrap();
+                    ho_time + duration / 1000.0
+                }
+                HitObjectKind::Spinner(SpinnerInfo { end_time }) => (end_time.0 as f64) / 1000.0,
+            };
+            if ho_time - approach_time < time && time < end_time {
                 visible_hitobjects.push(ho);
             }
         }
