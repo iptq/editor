@@ -1,4 +1,3 @@
 - stacking
 - don't draw overlaps between slider segments
-- use skin components
 - timeline

@@ -1,3 +1,4 @@
+mod grid;
 mod sliders;
 mod timeline;
 
@@ -10,13 +11,11 @@ use anyhow::Result;
 use ggez::{
     event::{EventHandler, KeyCode, KeyMods},
     graphics::{
-        self, Color, DrawMode, DrawParam, FillOptions, FilterMode, Mesh, Rect, StrokeOptions, Text,
-        WHITE,
+        self, Color, DrawMode, DrawParam, FilterMode, Mesh, Rect, StrokeOptions, Text, WHITE,
     },
-    nalgebra::Point2,
     Context, GameError, GameResult,
 };
-use libosu::{Beatmap, HitObject, HitObjectKind, Point, SpinnerInfo, Spline};
+use libosu::{Beatmap, HitObjectKind, Point, SpinnerInfo, Spline};
 
 use crate::audio::{AudioEngine, Sound};
 use crate::beatmap::{BeatmapExt, STACK_DISTANCE};
@@ -24,6 +23,9 @@ use crate::hit_object::HitObjectExt;
 use crate::skin::Skin;
 
 use self::sliders::render_slider;
+
+pub const PLAYFIELD_BOUNDS: Rect = Rect::new(112.0, 112.0, 800.0, 600.0);
+pub const SEEKER_BOUNDS: Rect = Rect::new(46.0, 722.0, 932.0, 36.0);
 
 pub type SliderCache = HashMap<Vec<Point<i32>>, Spline>;
 
@@ -89,18 +91,10 @@ impl Game {
 
     fn priv_draw(&mut self, ctx: &mut Context) -> Result<()> {
         // TODO: lol
-        const PLAYFIELD_BOUNDS: Rect = Rect::new(112.0, 112.0, 800.0, 600.0);
-        const SEEKER_BOUNDS: Rect = Rect::new(46.0, 722.0, 932.0, 36.0);
 
         graphics::clear(ctx, [0.0, 0.0, 0.0, 1.0].into());
 
-        let playfield = Mesh::new_rectangle(
-            ctx,
-            DrawMode::Stroke(StrokeOptions::default()),
-            PLAYFIELD_BOUNDS,
-            Color::new(1.0, 1.0, 1.0, 0.5),
-        )?;
-        graphics::draw(ctx, &playfield, DrawParam::default())?;
+        self.draw_grid(ctx)?;
 
         let time = self.song.as_ref().unwrap().position()?;
         let text = Text::new(format!("time: {}", time).as_ref());
