@@ -1,3 +1,0 @@
-- stacking
-- don't draw overlaps between slider segments
-- timeline

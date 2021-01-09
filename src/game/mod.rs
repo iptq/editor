@@ -73,7 +73,7 @@ impl Game {
         let dir = path.parent().unwrap();
 
         let song = Sound::create(dir.join(&self.beatmap.inner.audio_filename))?;
-        song.set_position(28.0)?;
+        song.set_position(65.0)?;
         self.song = Some(song);
 
         Ok(())

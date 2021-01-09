@@ -2,6 +2,8 @@
 extern crate anyhow;
 #[macro_use]
 extern crate log;
+#[macro_use]
+extern crate structopt;
 extern crate bass_sys as bass;
 
 mod audio;
@@ -11,6 +13,7 @@ mod hit_object;
 mod skin;
 
 use std::env;
+use std::path::PathBuf;
 
 use anyhow::Result;
 use ggez::{
@@ -19,6 +22,15 @@ use ggez::{
 };
 
 use crate::game::Game;
+
+#[derive(StructOpt)]
+struct Opt {
+    path: Option<PathBuf>,
+
+    /// Verbose mode (-v, -vv, -vvv, etc)
+    #[structopt(short = "v", long = "verbose", parse(from_occurrences))]
+    verbose: usize,
+}
 
 fn main() -> Result<()> {
     stderrlog::new()
