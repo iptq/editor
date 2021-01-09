@@ -4,9 +4,9 @@ use ggez::{
     nalgebra::Point2,
     Context,
 };
-use libosu::{HitObjectKind, TimingPointKind};
+use libosu::{hitobject::HitObjectKind, timing::TimingPointKind};
 
-use crate::hit_object::HitObjectExt;
+use crate::hitobject::HitObjectExt;
 
 use super::Game;
 

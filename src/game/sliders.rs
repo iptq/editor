@@ -6,7 +6,11 @@ use ggez::{
     nalgebra::Point2,
     Context,
 };
-use libosu::{Beatmap, HitObject, HitObjectKind, Spline};
+use libosu::{
+    beatmap::Beatmap,
+    hitobject::{HitObject, HitObjectKind},
+    spline::Spline,
+};
 
 use crate::game::SliderCache;
 

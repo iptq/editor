@@ -1,5 +1,6 @@
 #[macro_use]
 extern crate anyhow;
+#[allow(unused_macros, unused_imports)]
 #[macro_use]
 extern crate log;
 extern crate bass_sys as bass;
@@ -7,7 +8,7 @@ extern crate bass_sys as bass;
 mod audio;
 mod beatmap;
 mod game;
-mod hit_object;
+mod hitobject;
 mod skin;
 
 use std::path::PathBuf;

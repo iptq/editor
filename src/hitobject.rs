@@ -1,4 +1,4 @@
-use libosu::{Color, HitObject};
+use libosu::hitobject::HitObject;
 
 pub struct HitObjectExt {
     pub inner: HitObject,

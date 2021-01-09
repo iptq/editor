@@ -1,6 +1,6 @@
-use libosu::{Beatmap, HitObjectKind, Point};
+use libosu::{beatmap::Beatmap, hitobject::HitObjectKind, math::Point};
 
-use crate::hit_object::HitObjectExt;
+use crate::hitobject::HitObjectExt;
 
 pub const STACK_DISTANCE: f64 = 3.0;
 

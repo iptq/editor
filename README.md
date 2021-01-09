@@ -27,3 +27,7 @@ license
 not sure yet, probably gpl
 
 includes code ported from ppy/osu, which is mit-licensed
+
+uses [libosu][1]
+
+[1]: https://github.com/iptq/libosu

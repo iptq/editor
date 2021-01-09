@@ -10,16 +10,19 @@ use std::path::Path;
 use anyhow::Result;
 use ggez::{
     event::{EventHandler, KeyCode, KeyMods},
-    graphics::{
-        self, Color, DrawMode, DrawParam, FilterMode, Mesh, Rect, StrokeOptions, Text, WHITE,
-    },
+    graphics::{self, Color, DrawParam, FilterMode, Rect, Text, WHITE},
     Context, GameError, GameResult,
 };
-use libosu::{Beatmap, HitObjectKind, Point, SpinnerInfo, Spline};
+use libosu::{
+    beatmap::Beatmap,
+    hitobject::{HitObjectKind, SpinnerInfo},
+    math::Point,
+    spline::Spline,
+};
 
 use crate::audio::{AudioEngine, Sound};
 use crate::beatmap::{BeatmapExt, STACK_DISTANCE};
-use crate::hit_object::HitObjectExt;
+use crate::hitobject::HitObjectExt;
 use crate::skin::Skin;
 
 use self::sliders::render_slider;
@@ -89,7 +92,7 @@ impl Game {
         }
     }
 
-    fn priv_draw(&mut self, ctx: &mut Context) -> Result<()> {
+    fn draw_helper(&mut self, ctx: &mut Context) -> Result<()> {
         // TODO: lol
 
         graphics::clear(ctx, [0.0, 0.0, 0.0, 1.0].into());
@@ -250,13 +253,16 @@ impl EventHandler for Game {
     }
 
     fn key_up_event(&mut self, _: &mut Context, keycode: KeyCode, _: KeyMods) {
-        if let KeyCode::Space = keycode {
-            self.toggle_playing();
+        use KeyCode::*;
+        match keycode {
+            Space => self.toggle_playing(),
+            Colon => {}
+            _ => {}
         }
     }
 
     fn draw(&mut self, ctx: &mut Context) -> GameResult {
-        if let Err(err) = self.priv_draw(ctx) {
+        if let Err(err) = self.draw_helper(ctx) {
             return Err(GameError::RenderError(err.to_string()));
         };
         Ok(())
