@@ -1,10 +1,10 @@
 use anyhow::Result;
 use ggez::{
-    graphics::{self, Color, DrawParam, Mesh, Rect, WHITE},
+    graphics::{self, Color, DrawMode, DrawParam, LineCap, Mesh, Rect, StrokeOptions, WHITE},
     nalgebra::Point2,
     Context,
 };
-use libosu::TimingPointKind;
+use libosu::{HitObjectKind, TimingPointKind};
 
 use crate::hit_object::HitObjectExt;
 
@@ -131,6 +131,33 @@ impl Game {
             let timeline_percent = (ho_time - timeline_left) / (timeline_right - timeline_left);
             let timeline_x = timeline_percent as f32 * BOUNDS.w + BOUNDS.x;
             let timeline_y = BOUNDS.y;
+
+            // draw the slider body on the timeline first
+            if let HitObjectKind::Slider(info) = &ho.inner.kind {
+                let end_time = self
+                    .beatmap
+                    .inner
+                    .get_hitobject_end_time(&ho.inner)
+                    .as_seconds();
+                let tail_percent = (end_time - timeline_left) / (timeline_right - timeline_left);
+                let tail_x = tail_percent as f32 * BOUNDS.w + BOUNDS.x;
+                let body_y = BOUNDS.y + BOUNDS.h / 2.0;
+
+                let mut color = color;
+                color.a = 0.5;
+                let body = Mesh::new_polyline(
+                    ctx,
+                    DrawMode::Stroke(
+                        StrokeOptions::default()
+                            .with_line_width(BOUNDS.h)
+                            .with_line_cap(LineCap::Round),
+                    ),
+                    &[Point2::new(timeline_x, body_y), Point2::new(tail_x, body_y)],
+                    color,
+                )?;
+                graphics::draw(ctx, &body, DrawParam::default())?;
+            }
+
             self.skin.hitcircle.draw(
                 ctx,
                 (BOUNDS.h, BOUNDS.h),
