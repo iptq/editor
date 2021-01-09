@@ -1072,7 +1072,7 @@ checksum = "c7d73b3f436185384286bd8098d17ec07c9a7d2388a6599f824d8502b529702a"
 [[package]]
 name = "libosu"
 version = "0.0.15"
-source = "git+https://github.com/iptq/libosu?rev=ca87faef07b308288dad623dd115c903a7a81353#ca87faef07b308288dad623dd115c903a7a81353"
+source = "git+https://github.com/iptq/libosu?rev=2623c1a4ae52c194bb3167a96f578f3585cdf88e#2623c1a4ae52c194bb3167a96f578f3585cdf88e"
 dependencies = [
  "anyhow",
  "bitflags",

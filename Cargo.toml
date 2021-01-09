@@ -21,4 +21,4 @@ structopt = "0.3.21"
 
 [dependencies.libosu]
 git = "https://github.com/iptq/libosu"
-rev = "ca87faef07b308288dad623dd115c903a7a81353"
+rev = "2623c1a4ae52c194bb3167a96f578f3585cdf88e"
