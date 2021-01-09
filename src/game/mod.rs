@@ -76,9 +76,15 @@ impl Game {
         let dir = path.parent().unwrap();
 
         let song = Sound::create(dir.join(&self.beatmap.inner.audio_filename))?;
-        song.set_position(65.0)?;
         self.song = Some(song);
 
+        Ok(())
+    }
+
+    pub fn jump_to_time(&mut self, time: f64) -> Result<()> {
+        if let Some(song) = &self.song {
+            song.set_position(time)?;
+        }
         Ok(())
     }
 

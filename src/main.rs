@@ -24,6 +24,9 @@ use crate::game::Game;
 
 #[derive(StructOpt)]
 struct Opt {
+    #[structopt(short = "s")]
+    start_time: Option<f64>,
+
     path: Option<PathBuf>,
 
     /// Verbose mode (-v, -vv, -vvv, etc)
@@ -51,6 +54,10 @@ fn main() -> Result<()> {
 
     if let Some(path) = opt.path {
         game.load_beatmap(path)?;
+    }
+
+    if let Some(start_time) = opt.start_time {
+        game.jump_to_time(start_time)?;
     }
 
     event::run(&mut ctx, &mut event_loop, &mut game)?;
