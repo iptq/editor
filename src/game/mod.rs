@@ -190,6 +190,19 @@ impl Game {
                     color,
                 )?;
                 slider_info = Some((info, spline));
+
+                let end_pos = ho.inner.end_pos().unwrap();
+                let end_pos = [PLAYFIELD_BOUNDS.x + osupx_scale_x * end_pos.0 as f32, PLAYFIELD_BOUNDS.y + osupx_scale_y*end_pos.1 as f32];
+                self.skin.hitcircle.draw(
+                    ctx,
+                    (cs_real * 2.0, cs_real * 2.0),
+                    DrawParam::default().dest(end_pos).color(color),
+                )?;
+                self.skin.hitcircleoverlay.draw(
+                    ctx,
+                    (cs_real * 2.0, cs_real * 2.0),
+                    DrawParam::default().dest(end_pos),
+                )?;
             }
 
             self.skin.hitcircle.draw(
@@ -197,7 +210,6 @@ impl Game {
                 (cs_real * 2.0, cs_real * 2.0),
                 DrawParam::default().dest(pos).color(color),
             )?;
-
             self.skin.hitcircleoverlay.draw(
                 ctx,
                 (cs_real * 2.0, cs_real * 2.0),
