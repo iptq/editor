@@ -23,7 +23,7 @@ pub fn render_slider<'a>(
         HitObjectKind::Slider(info) => info,
         _ => unreachable!("retard"),
     };
-    control_points.extend(&slider_info.control);
+    control_points.extend(&slider_info.control_points);
 
     let spline = if slider_cache.contains_key(&control_points) {
         slider_cache.get(&control_points).unwrap()

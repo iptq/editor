@@ -20,4 +20,4 @@ ordered-float = "2.0.1"
 
 [dependencies.libosu]
 git = "https://github.com/iptq/libosu"
-rev = "f15cfd0c6331ba7ad76cc0acc0eb5c11cb145cb0"
+rev = "332b7a55559c0257cc4d39577240b1cab5ed3d07"

@@ -16,7 +16,8 @@ use ggez::{
 use libosu::{Beatmap, HitObject, HitObjectKind, Point, SpinnerInfo, Spline};
 
 use crate::audio::{AudioEngine, Sound};
-use crate::beatmap::BeatmapExt;
+use crate::hit_object::HitObjectExt;
+use crate::beatmap::{BeatmapExt, STACK_DISTANCE};
 use crate::skin::Skin;
 use crate::slider_render::render_slider;
 
@@ -60,6 +61,7 @@ impl Game {
 
         let beatmap = Beatmap::from_osz(&contents)?;
         self.beatmap = BeatmapExt::new(beatmap);
+        self.beatmap.compute_stacking();
 
         let dir = path.parent().unwrap();
 
@@ -102,7 +104,7 @@ impl Game {
         graphics::draw_queued_text(ctx, DrawParam::default(), None, FilterMode::Linear)?;
 
         struct DrawInfo<'a> {
-            hit_object: &'a HitObject,
+            hit_object: &'a HitObjectExt,
             opacity: f64,
             end_time: f64,
         }
@@ -133,8 +135,8 @@ impl Game {
         // TODO: tighten this loop even more by binary searching for the start of the timeline and
         // playfield hitobjects rather than looping through the entire beatmap, better yet, just
         // keeping track of the old index will probably be much faster
-        for ho in self.beatmap.inner.hit_objects.iter().rev() {
-            let ho_time = (ho.start_time.0 as f64) / 1000.0;
+        for ho in self.beatmap.hit_objects.iter().rev() {
+            let ho_time = (ho.inner.start_time.0 as f64) / 1000.0;
 
             // draw in timeline
             if ho_time >= timeline_left && ho_time <= timeline_right {
@@ -172,10 +174,10 @@ impl Game {
                 // TODO: calculate ease
                 (time - (ho_time - preempt)) / fade_in
             };
-            match ho.kind {
+            match ho.inner.kind {
                 HitObjectKind::Circle => end_time = ho_time,
                 HitObjectKind::Slider(_) => {
-                    let duration = self.beatmap.inner.get_slider_duration(ho).unwrap();
+                    let duration = self.beatmap.inner.get_slider_duration(&ho.inner).unwrap();
                     end_time = ho_time + duration / 1000.0;
                 }
                 HitObjectKind::Spinner(SpinnerInfo {
@@ -199,21 +201,22 @@ impl Game {
 
         for draw_info in playfield_hitobjects.iter() {
             let ho = draw_info.hit_object;
-            let ho_time = (ho.start_time.0 as f64) / 1000.0;
+            let ho_time = (ho.inner.start_time.0 as f64) / 1000.0;
+            let stacking = ho.stacking as f32 * STACK_DISTANCE as f32;
             let pos = [
-                PLAYFIELD_BOUNDS.x + osupx_scale_x * ho.pos.0 as f32,
-                PLAYFIELD_BOUNDS.y + osupx_scale_y * ho.pos.1 as f32,
+                PLAYFIELD_BOUNDS.x + osupx_scale_x * ho.inner.pos.0 as f32 - stacking,
+                PLAYFIELD_BOUNDS.y + osupx_scale_y * ho.inner.pos.1 as f32 - stacking,
             ];
             let color = graphics::Color::new(1.0, 1.0, 1.0, draw_info.opacity as f32);
 
-            if let HitObjectKind::Slider(info) = &ho.kind {
+            if let HitObjectKind::Slider(info) = &ho.inner.kind {
                 let color = graphics::Color::new(1.0, 1.0, 1.0, 0.6 * draw_info.opacity as f32);
                 let spline = render_slider(
                     &mut self.slider_cache,
                     ctx,
                     PLAYFIELD_BOUNDS,
                     &self.beatmap.inner,
-                    ho,
+                    &ho.inner,
                     color,
                 )?;
 
