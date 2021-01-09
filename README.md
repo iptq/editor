@@ -1,6 +1,8 @@
 wip osu editor
 ==============
 
+![](docs/images/screenshot.png)
+
 running on linux
 ----------------
 
