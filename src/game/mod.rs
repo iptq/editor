@@ -179,7 +179,8 @@ impl Game {
 
             let mut slider_info = None;
             if let HitObjectKind::Slider(info) = &ho.inner.kind {
-                let color = graphics::Color::new(1.0, 1.0, 1.0, 0.6 * draw_info.opacity as f32);
+                let mut color = color.clone();
+                color.a = 0.6 * draw_info.opacity as f32;
                 let spline = render_slider(
                     &mut self.slider_cache,
                     ctx,

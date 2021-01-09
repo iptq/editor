@@ -1,7 +1,9 @@
 use anyhow::Result;
 use ggez::{
+    conf::NumSamples,
     graphics::{
-        self, Color, DrawMode, DrawParam, FillOptions, LineCap, LineJoin, Mesh, Rect, StrokeOptions,
+        self, Canvas, Color, DrawMode, DrawParam, FillOptions, LineCap, LineJoin, Mesh, Rect,
+        StrokeOptions,
     },
     nalgebra::Point2,
     Context,
@@ -54,30 +56,41 @@ pub fn render_slider<'a>(
         })
         .collect::<Vec<Point2<_>>>();
 
-    let (mut boundx, mut boundy, mut boundw, mut boundh) = (0.0f64, 0.0f64, 0.0f64, 0.0f64);
+    let (mut boundx, mut boundy, mut boundw, mut boundh) = (f64::MAX, f64::MAX, 0.0f64, 0.0f64);
     let spline_mapped = spline
         .spline_points
         .iter()
         .map(|point| {
             let (x, y) = (point.0, point.1);
-            boundx = boundx.min(x - cs_osupx);
-            boundy = boundy.min(y - cs_osupx);
-            boundw = boundw.max(x + cs_osupx - boundx);
-            boundh = boundh.max(y + cs_osupx - boundy);
-
             let x2 = rect.x as f64 + osupx_scale_x * x;
             let y2 = rect.y as f64 + osupx_scale_y * y;
+            boundx = boundx.min(x2 - cs_osupx);
+            boundy = boundy.min(y2 - cs_osupx);
+            boundw = boundw.max(x2 + cs_osupx - boundx);
+            boundh = boundh.max(y2 + cs_osupx - boundy);
             [x2 as f32, y2 as f32].into()
         })
         .collect::<Vec<Point2<f32>>>();
 
+    // draw slider body
+    let canvas = Canvas::with_window_size(ctx)?;
     let opts = StrokeOptions::default()
         .with_line_cap(LineCap::Round)
         .with_line_join(LineJoin::Round)
         .with_line_width(cs_real as f32 * 2.0);
-    let body = Mesh::new_polyline(ctx, DrawMode::Stroke(opts), &spline_mapped, color)?;
+    let body = Mesh::new_polyline(
+        ctx,
+        DrawMode::Stroke(opts),
+        spline_mapped.as_ref(),
+        graphics::WHITE,
+    )?;
+    graphics::set_canvas(ctx, Some(&canvas));
+    graphics::clear(ctx, Color::new(0.0, 0.0, 0.0, 0.0));
     graphics::draw(ctx, &body, DrawParam::default())?;
+    graphics::set_canvas(ctx, None);
+    graphics::draw(ctx, &canvas, DrawParam::default().color(color))?;
 
+    // draw control points wireframe
     let frame = Mesh::new_polyline(
         ctx,
         DrawMode::Stroke(StrokeOptions::default()),
@@ -85,6 +98,8 @@ pub fn render_slider<'a>(
         graphics::WHITE,
     )?;
     graphics::draw(ctx, &frame, DrawParam::default())?;
+
+    // draw points on wireframe
     for point in points_mapped {
         let size = 5.0;
         let rect = Rect::new(point.x - size, point.y - size, size * 2.0, size * 2.0);

@@ -240,7 +240,7 @@ impl Game {
                     )?;
                     self.skin.reversearrow.draw(
                         ctx,
-                        (BOUNDS.h/2.0, BOUNDS.h/2.0),
+                        (BOUNDS.h / 2.0, BOUNDS.h / 2.0),
                         DrawParam::default()
                             .dest([repeat_x, timeline_y + BOUNDS.h / 2.0])
                             .offset([0.5, 0.5]),
