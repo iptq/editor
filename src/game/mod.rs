@@ -1,5 +1,5 @@
-mod timeline;
 mod sliders;
+mod timeline;
 
 use std::collections::HashMap;
 use std::fs::File;
@@ -114,8 +114,6 @@ impl Game {
             color: Color,
         }
 
-        self.draw_timeline(ctx, time)?;
-
         let mut playfield_hitobjects = Vec::new();
         let preempt = (self.beatmap.inner.difficulty.approach_preempt() as f64) / 1000.0;
         let fade_in = (self.beatmap.inner.difficulty.approach_fade_time() as f64) / 1000.0;
@@ -163,6 +161,8 @@ impl Game {
                 });
             }
         }
+
+        self.draw_timeline(ctx, time)?;
 
         let cs_scale = PLAYFIELD_BOUNDS.w / 640.0;
         let osupx_scale_x = PLAYFIELD_BOUNDS.w / 512.0;
