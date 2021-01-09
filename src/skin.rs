@@ -1,5 +1,3 @@
-use std::path::{Path, PathBuf};
-
 use anyhow::Result;
 use ggez::{
     graphics::{self, DrawParam, Image},
@@ -105,13 +103,13 @@ impl Texture {
         Ok(())
     }
 
-    pub fn draw(&mut self, ctx: &mut Context, size: (f32, f32), param: DrawParam) -> Result<()> {
+    pub fn draw(&self, ctx: &mut Context, size: (f32, f32), param: DrawParam) -> Result<()> {
         let image = self.image.as_ref().unwrap();
         self.draw_image(ctx, image, size, param)
     }
 
     pub fn draw_frame(
-        &mut self,
+        &self,
         ctx: &mut Context,
         size: (f32, f32),
         param: DrawParam,

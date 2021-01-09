@@ -27,7 +27,7 @@ impl BeatmapExt {
         for ho in self.hit_objects.iter_mut() {
             if ho.inner.new_combo {
                 number = 1;
-                color_idx = (color_idx+1) % self.inner.colors.len();
+                color_idx = (color_idx + 1) % self.inner.colors.len();
             }
 
             ho.number = number;

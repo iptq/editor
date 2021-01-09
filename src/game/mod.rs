@@ -1,3 +1,5 @@
+mod timeline;
+
 use std::collections::HashMap;
 use std::fs::File;
 use std::io::Read;
@@ -87,7 +89,6 @@ impl Game {
         // TODO: lol
         const PLAYFIELD_BOUNDS: Rect = Rect::new(112.0, 112.0, 800.0, 600.0);
         const SEEKER_BOUNDS: Rect = Rect::new(46.0, 722.0, 932.0, 36.0);
-        const TIMELINE_BOUNDS: Rect = Rect::new(0.0, 0.0, 1024.0, 108.0);
 
         graphics::clear(ctx, [0.0, 0.0, 0.0, 1.0].into());
 
@@ -111,23 +112,7 @@ impl Game {
             color: Color,
         }
 
-        let timeline_span = 6.0 / self.beatmap.inner.timeline_zoom;
-        let timeline_left = time - timeline_span / 2.0;
-        let timeline_right = time + timeline_span / 2.0;
-        let timeline_current_line_x = TIMELINE_BOUNDS.x + TIMELINE_BOUNDS.w * 0.5;
-        let current_line = Mesh::new_line(
-            ctx,
-            &[
-                Point2::new(timeline_current_line_x, TIMELINE_BOUNDS.y),
-                Point2::new(
-                    timeline_current_line_x,
-                    TIMELINE_BOUNDS.y + TIMELINE_BOUNDS.h,
-                ),
-            ],
-            2.0,
-            graphics::WHITE,
-        )?;
-        graphics::draw(ctx, &current_line, DrawParam::default())?;
+        self.draw_timeline(ctx, time)?;
 
         let mut playfield_hitobjects = Vec::new();
         let preempt = (self.beatmap.inner.difficulty.approach_preempt() as f64) / 1000.0;
@@ -147,26 +132,7 @@ impl Game {
             );
 
             // draw in timeline
-            if ho_time >= timeline_left && ho_time <= timeline_right {
-                let timeline_percent = (ho_time - timeline_left) / (timeline_right - timeline_left);
-                let timeline_x = timeline_percent as f32 * TIMELINE_BOUNDS.w + TIMELINE_BOUNDS.x;
-                let timeline_y = TIMELINE_BOUNDS.y;
-                self.skin.hitcircle.draw(
-                    ctx,
-                    (TIMELINE_BOUNDS.h, TIMELINE_BOUNDS.h),
-                    DrawParam::default()
-                        .dest([timeline_x, timeline_y + TIMELINE_BOUNDS.h / 2.0])
-                        .offset([0.5, 0.0])
-                        .color(color),
-                )?;
-                self.skin.hitcircleoverlay.draw(
-                    ctx,
-                    (TIMELINE_BOUNDS.h, TIMELINE_BOUNDS.h),
-                    DrawParam::default()
-                        .dest([timeline_x, timeline_y + TIMELINE_BOUNDS.h / 2.0])
-                        .offset([0.5, 0.0]),
-                )?;
-            }
+            self.draw_hitobject_to_timeline(ctx, time, ho)?;
 
             // draw hitobject in playfield
             let end_time;
@@ -251,7 +217,6 @@ impl Game {
                         travel_percent = 1.0 - travel_percent;
                     }
                     let travel_length = travel_percent * info.pixel_length;
-                    // print!("ho={:.3} ", ho_time);
                     let pos = spline.point_at_length(travel_length);
                     let ball_pos = [
                         PLAYFIELD_BOUNDS.x + osupx_scale_x * pos.0 as f32,
