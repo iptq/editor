@@ -71,7 +71,7 @@ impl Game {
         let beatmap = Beatmap::from_osz(&contents)?;
         self.beatmap = BeatmapExt::new(beatmap);
         self.beatmap.compute_colors();
-        // self.beatmap.compute_stacking();
+        self.beatmap.compute_stacking();
 
         let dir = path.parent().unwrap();
 
@@ -192,7 +192,10 @@ impl Game {
                 slider_info = Some((info, spline));
 
                 let end_pos = ho.inner.end_pos().unwrap();
-                let end_pos = [PLAYFIELD_BOUNDS.x + osupx_scale_x * end_pos.0 as f32, PLAYFIELD_BOUNDS.y + osupx_scale_y*end_pos.1 as f32];
+                let end_pos = [
+                    PLAYFIELD_BOUNDS.x + osupx_scale_x * end_pos.0 as f32,
+                    PLAYFIELD_BOUNDS.y + osupx_scale_y * end_pos.1 as f32,
+                ];
                 self.skin.hitcircle.draw(
                     ctx,
                     (cs_real * 2.0, cs_real * 2.0),
