@@ -150,8 +150,12 @@ impl Game {
         let timeline_left = time - timeline_span / 2.0;
         let timeline_right = time + timeline_span / 2.0;
 
-        let ho_time = (ho.inner.start_time.0 as f64) / 1000.0;
-        let end_time = (self.beatmap.inner.get_hitobject_end_time(&ho.inner).0 as f64) / 1000.0;
+        let start_time = (ho.inner.start_time.0 as f64) / 1000.0;
+        let end_time = self
+            .beatmap
+            .inner
+            .get_hitobject_end_time(&ho.inner)
+            .as_seconds();
 
         let color = self.beatmap.inner.colors[ho.color_idx];
         let color = graphics::Color::new(
@@ -161,21 +165,17 @@ impl Game {
             1.0,
         );
 
-        if end_time >= timeline_left && ho_time <= timeline_right {
-            let timeline_percent = (ho_time - timeline_left) / (timeline_right - timeline_left);
-            let timeline_x = timeline_percent as f32 * BOUNDS.w + BOUNDS.x;
+        if end_time >= timeline_left && start_time <= timeline_right {
+            let timeline_percent = (start_time - timeline_left) / (timeline_right - timeline_left);
+            let head_x = timeline_percent as f32 * BOUNDS.w + BOUNDS.x;
             let timeline_y = BOUNDS.y;
 
+            let tail_percent =
+                (end_time.min(timeline_right) - timeline_left) / (timeline_right - timeline_left);
+            let tail_x = tail_percent as f32 * BOUNDS.w + BOUNDS.x;
+
             // draw the slider body on the timeline first
-            if let HitObjectKind::Slider(_) = &ho.inner.kind {
-                let end_time = self
-                    .beatmap
-                    .inner
-                    .get_hitobject_end_time(&ho.inner)
-                    .as_seconds();
-                let tail_percent = (end_time.min(timeline_right) - timeline_left)
-                    / (timeline_right - timeline_left);
-                let tail_x = tail_percent as f32 * BOUNDS.w + BOUNDS.x;
+            if let HitObjectKind::Slider(info) = &ho.inner.kind {
                 let body_y = BOUNDS.y + BOUNDS.h / 2.0;
 
                 let mut color = color;
@@ -187,17 +187,74 @@ impl Game {
                             .with_line_width(BOUNDS.h)
                             .with_line_cap(LineCap::Round),
                     ),
-                    &[Point2::new(timeline_x, body_y), Point2::new(tail_x, body_y)],
+                    &[Point2::new(head_x, body_y), Point2::new(tail_x, body_y)],
                     color,
                 )?;
                 graphics::draw(ctx, &body, DrawParam::default())?;
+
+                // draw the slider tail
+                if end_time < timeline_right {
+                    self.skin.hitcircle.draw(
+                        ctx,
+                        (BOUNDS.h, BOUNDS.h),
+                        DrawParam::default()
+                            .dest([tail_x, timeline_y + BOUNDS.h / 2.0])
+                            .offset([0.5, 0.0])
+                            .color(color),
+                    )?;
+                    self.skin.hitcircleoverlay.draw(
+                        ctx,
+                        (BOUNDS.h, BOUNDS.h),
+                        DrawParam::default()
+                            .dest([tail_x, timeline_y + BOUNDS.h / 2.0])
+                            .offset([0.5, 0.0]),
+                    )?;
+                }
+
+                // draw all visible repeats
+                let single_repeat_duration = (end_time - start_time) / info.num_repeats as f64;
+                let mut last_visible_repeat = start_time
+                    + (((end_time - single_repeat_duration / 2.0).min(timeline_right)
+                        - start_time.max(timeline_left))
+                        / single_repeat_duration)
+                        .floor()
+                        * single_repeat_duration;
+                while (last_visible_repeat - start_time) > 0.001 {
+                    let repeat_percent =
+                        (last_visible_repeat - timeline_left) / (timeline_right - timeline_left);
+                    let repeat_x = repeat_percent as f32 * BOUNDS.w + BOUNDS.x;
+                    self.skin.hitcircle.draw(
+                        ctx,
+                        (BOUNDS.h, BOUNDS.h),
+                        DrawParam::default()
+                            .dest([repeat_x, timeline_y + BOUNDS.h / 2.0])
+                            .offset([0.5, 0.0])
+                            .color(color),
+                    )?;
+                    self.skin.hitcircleoverlay.draw(
+                        ctx,
+                        (BOUNDS.h, BOUNDS.h),
+                        DrawParam::default()
+                            .dest([repeat_x, timeline_y + BOUNDS.h / 2.0])
+                            .offset([0.5, 0.0]),
+                    )?;
+                    self.skin.reversearrow.draw(
+                        ctx,
+                        (BOUNDS.h/2.0, BOUNDS.h/2.0),
+                        DrawParam::default()
+                            .dest([repeat_x, timeline_y + BOUNDS.h / 2.0])
+                            .offset([0.5, 0.5]),
+                    )?;
+                    last_visible_repeat -= single_repeat_duration;
+                }
             }
 
+            // draw the slider head
             self.skin.hitcircle.draw(
                 ctx,
                 (BOUNDS.h, BOUNDS.h),
                 DrawParam::default()
-                    .dest([timeline_x, timeline_y + BOUNDS.h / 2.0])
+                    .dest([head_x, timeline_y + BOUNDS.h / 2.0])
                     .offset([0.5, 0.0])
                     .color(color),
             )?;
@@ -205,7 +262,7 @@ impl Game {
                 ctx,
                 (BOUNDS.h, BOUNDS.h),
                 DrawParam::default()
-                    .dest([timeline_x, timeline_y + BOUNDS.h / 2.0])
+                    .dest([head_x, timeline_y + BOUNDS.h / 2.0])
                     .offset([0.5, 0.0]),
             )?;
         }

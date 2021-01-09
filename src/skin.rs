@@ -35,6 +35,7 @@ create_skin! {
     [approachcircle, false],
     [hitcircle, false],
     [hitcircleoverlay, false],
+    [reversearrow, false],
     [sliderb, true],
 }
 
