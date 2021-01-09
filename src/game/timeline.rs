@@ -43,27 +43,61 @@ impl Game {
 
         // timing sections in this little span
         let mut last_uninherited = None;
-        for timing_points in self.beatmap.inner.timing_points.windows(2) {
-            let (fst, snd) = (&timing_points[0], &timing_points[1]);
+        let uninherited_timing_points = self
+            .beatmap
+            .inner
+            .timing_points
+            .iter()
+            .filter(|x| matches!(x.kind, TimingPointKind::Uninherited(_)))
+            .collect::<Vec<_>>();
+
+        for i in 0..uninherited_timing_points.len() {
+            let (fst, snd) = (
+                &uninherited_timing_points[i],
+                uninherited_timing_points.get(i + 1),
+            );
             let fst_time = fst.time.as_seconds();
-            let snd_time = snd.time.as_seconds();
             if let TimingPointKind::Uninherited(info) = &fst.kind {
                 last_uninherited = Some(info);
             }
 
+            let snd_time = if let Some(snd) = snd {
+                let snd_time = snd.time.as_seconds();
+                if snd_time >= timeline_left && snd_time <= timeline_right {
+                    Some(snd_time)
+                } else {
+                    None
+                }
+            } else {
+                None
+            };
+
             if let Some(last_uninherited) = last_uninherited {
                 if (fst_time >= timeline_left && fst_time <= timeline_right)
-                    || (snd_time >= timeline_left && snd_time <= timeline_right)
-                    || (fst_time < timeline_left && snd_time > timeline_right)
+                    || (snd_time.is_some()
+                        && snd_time.unwrap() >= timeline_left
+                        && snd_time.unwrap() <= timeline_right)
+                    || (fst_time < timeline_left
+                        && ((snd_time.is_some() && snd_time.unwrap() > timeline_right)
+                            || snd_time.is_none()))
                 {
                     // TODO: optimize this
-                    let mut time = fst.time.as_seconds();
                     let beat = last_uninherited.mpb / 1000.0;
                     let ticks = TICKS[last_uninherited.meter as usize];
+
+                    let mut time = fst.time.as_seconds();
+                    let passed_measures = ((timeline_left - time) / beat).floor();
+                    time += passed_measures * beat;
+
+                    let mut right_limit = timeline_right;
+                    if let Some(snd_time) = snd_time {
+                        right_limit = right_limit.min(snd_time);
+                    }
+
                     'outer: loop {
                         for i in 0..last_uninherited.meter as usize {
                             let tick_time = time + beat * i as f64 / last_uninherited.meter as f64;
-                            if tick_time > snd_time.min(timeline_right) {
+                            if tick_time > right_limit {
                                 break 'outer;
                             }
 
@@ -83,7 +117,7 @@ impl Game {
                         }
                         time += beat;
 
-                        if time >= snd_time.min(timeline_right) {
+                        if time >= right_limit {
                             break;
                         }
                     }
@@ -133,13 +167,14 @@ impl Game {
             let timeline_y = BOUNDS.y;
 
             // draw the slider body on the timeline first
-            if let HitObjectKind::Slider(info) = &ho.inner.kind {
+            if let HitObjectKind::Slider(_) = &ho.inner.kind {
                 let end_time = self
                     .beatmap
                     .inner
                     .get_hitobject_end_time(&ho.inner)
                     .as_seconds();
-                let tail_percent = (end_time - timeline_left) / (timeline_right - timeline_left);
+                let tail_percent = (end_time.min(timeline_right) - timeline_left)
+                    / (timeline_right - timeline_left);
                 let tail_x = tail_percent as f32 * BOUNDS.w + BOUNDS.x;
                 let body_y = BOUNDS.y + BOUNDS.h / 2.0;
 
