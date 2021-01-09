@@ -21,6 +21,21 @@ impl BeatmapExt {
         BeatmapExt { inner, hit_objects }
     }
 
+    pub fn compute_colors(&mut self) {
+        let mut color_idx = 0;
+        let mut number = 1;
+        for ho in self.hit_objects.iter_mut() {
+            if ho.inner.new_combo {
+                number = 1;
+                color_idx = (color_idx+1) % self.inner.colors.len();
+            }
+
+            ho.number = number;
+            ho.color_idx = color_idx;
+            number += 1;
+        }
+    }
+
     pub fn compute_stacking(&mut self) {
         self.compute_stacking_inner(0, self.hit_objects.len() - 1)
     }

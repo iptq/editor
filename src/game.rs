@@ -16,8 +16,8 @@ use ggez::{
 use libosu::{Beatmap, HitObject, HitObjectKind, Point, SpinnerInfo, Spline};
 
 use crate::audio::{AudioEngine, Sound};
-use crate::hit_object::HitObjectExt;
 use crate::beatmap::{BeatmapExt, STACK_DISTANCE};
+use crate::hit_object::HitObjectExt;
 use crate::skin::Skin;
 use crate::slider_render::render_slider;
 
@@ -61,12 +61,13 @@ impl Game {
 
         let beatmap = Beatmap::from_osz(&contents)?;
         self.beatmap = BeatmapExt::new(beatmap);
-        self.beatmap.compute_stacking();
+        self.beatmap.compute_colors();
+        // self.beatmap.compute_stacking();
 
         let dir = path.parent().unwrap();
 
         let song = Sound::create(dir.join(&self.beatmap.inner.audio_filename))?;
-        song.set_position(113.0)?;
+        song.set_position(28.0)?;
         self.song = Some(song);
 
         Ok(())
@@ -107,12 +108,12 @@ impl Game {
             hit_object: &'a HitObjectExt,
             opacity: f64,
             end_time: f64,
+            color: Color,
         }
 
         let timeline_span = 6.0 / self.beatmap.inner.timeline_zoom;
         let timeline_left = time - timeline_span / 2.0;
         let timeline_right = time + timeline_span / 2.0;
-        println!("left {:.3} right {:.3}", timeline_left, timeline_right);
         let timeline_current_line_x = TIMELINE_BOUNDS.x + TIMELINE_BOUNDS.w * 0.5;
         let current_line = Mesh::new_line(
             ctx,
@@ -137,25 +138,26 @@ impl Game {
         // keeping track of the old index will probably be much faster
         for ho in self.beatmap.hit_objects.iter().rev() {
             let ho_time = (ho.inner.start_time.0 as f64) / 1000.0;
+            let color = self.beatmap.inner.colors[ho.color_idx];
+            let color = graphics::Color::new(
+                color.red as f32 / 256.0,
+                color.green as f32 / 256.0,
+                color.blue as f32 / 256.0,
+                1.0,
+            );
 
             // draw in timeline
             if ho_time >= timeline_left && ho_time <= timeline_right {
                 let timeline_percent = (ho_time - timeline_left) / (timeline_right - timeline_left);
                 let timeline_x = timeline_percent as f32 * TIMELINE_BOUNDS.w + TIMELINE_BOUNDS.x;
                 let timeline_y = TIMELINE_BOUNDS.y;
-                println!(
-                    " - [{}] {:.3}-{:.3} : {:.3}%",
-                    self.beatmap.inner.timeline_zoom,
-                    timeline_left,
-                    timeline_right,
-                    timeline_percent * 100.0
-                );
                 self.skin.hitcircle.draw(
                     ctx,
                     (TIMELINE_BOUNDS.h, TIMELINE_BOUNDS.h),
                     DrawParam::default()
                         .dest([timeline_x, timeline_y + TIMELINE_BOUNDS.h / 2.0])
-                        .offset([0.5, 0.0]),
+                        .offset([0.5, 0.0])
+                        .color(color),
                 )?;
                 self.skin.hitcircleoverlay.draw(
                     ctx,
@@ -189,6 +191,7 @@ impl Game {
                     hit_object: ho,
                     opacity,
                     end_time,
+                    color,
                 });
             }
         }
@@ -207,8 +210,9 @@ impl Game {
                 PLAYFIELD_BOUNDS.x + osupx_scale_x * ho.inner.pos.0 as f32 - stacking,
                 PLAYFIELD_BOUNDS.y + osupx_scale_y * ho.inner.pos.1 as f32 - stacking,
             ];
-            let color = graphics::Color::new(1.0, 1.0, 1.0, draw_info.opacity as f32);
+            let color = draw_info.color;
 
+            let mut slider_info = None;
             if let HitObjectKind::Slider(info) = &ho.inner.kind {
                 let color = graphics::Color::new(1.0, 1.0, 1.0, 0.6 * draw_info.opacity as f32);
                 let spline = render_slider(
@@ -219,7 +223,22 @@ impl Game {
                     &ho.inner,
                     color,
                 )?;
+                slider_info = Some((info, spline));
+            }
 
+            self.skin.hitcircle.draw(
+                ctx,
+                (cs_real * 2.0, cs_real * 2.0),
+                DrawParam::default().dest(pos).color(color),
+            )?;
+
+            self.skin.hitcircleoverlay.draw(
+                ctx,
+                (cs_real * 2.0, cs_real * 2.0),
+                DrawParam::default().dest(pos),
+            )?;
+
+            if let Some((info, spline)) = slider_info {
                 if time > ho_time && time < draw_info.end_time {
                     let elapsed_time = time - ho_time;
                     let total_duration = draw_info.end_time - ho_time;
@@ -241,23 +260,11 @@ impl Game {
                     self.skin.sliderb.draw_frame(
                         ctx,
                         (cs_real * 2.0, cs_real * 2.0),
-                        DrawParam::default().dest(ball_pos),
+                        DrawParam::default().dest(ball_pos).color(color),
                         (travel_percent / 0.25) as usize,
                     )?;
                 }
             }
-
-            self.skin.hitcircle.draw(
-                ctx,
-                (cs_real * 2.0, cs_real * 2.0),
-                DrawParam::default().dest(pos).color(color),
-            )?;
-
-            self.skin.hitcircleoverlay.draw(
-                ctx,
-                (cs_real * 2.0, cs_real * 2.0),
-                DrawParam::default().dest(pos).color(color),
-            )?;
 
             if time < ho_time {
                 let time_diff = ho_time - time;
