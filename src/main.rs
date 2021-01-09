@@ -1,3 +1,5 @@
+#![windows_subsystem = "windows"]
+
 #[macro_use]
 extern crate anyhow;
 #[allow(unused_macros, unused_imports)]
