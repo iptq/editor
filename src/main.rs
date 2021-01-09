@@ -2,8 +2,6 @@
 extern crate anyhow;
 #[macro_use]
 extern crate log;
-#[macro_use]
-extern crate structopt;
 extern crate bass_sys as bass;
 
 mod audio;
@@ -12,7 +10,6 @@ mod game;
 mod hit_object;
 mod skin;
 
-use std::env;
 use std::path::PathBuf;
 
 use anyhow::Result;
@@ -20,6 +17,7 @@ use ggez::{
     conf::{WindowMode, WindowSetup},
     event, ContextBuilder,
 };
+use structopt::StructOpt;
 
 use crate::game::Game;
 
@@ -33,10 +31,11 @@ struct Opt {
 }
 
 fn main() -> Result<()> {
+    let opt = Opt::from_args();
     stderrlog::new()
         .module("editor")
         .module("bass_sys")
-        .verbosity(2)
+        .verbosity(opt.verbose)
         .init()
         .unwrap();
 
@@ -48,8 +47,11 @@ fn main() -> Result<()> {
     let (mut ctx, mut event_loop) = cb.build()?;
     let mut game = Game::new()?;
     game.skin.load_all(&mut ctx)?;
-    let path = env::args().nth(1).unwrap();
-    game.load_beatmap(path)?;
+
+    if let Some(path) = opt.path {
+        game.load_beatmap(path)?;
+    }
+
     event::run(&mut ctx, &mut event_loop, &mut game)?;
 
     Ok(())
