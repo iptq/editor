@@ -1,6 +1,5 @@
 use anyhow::Result;
 use ggez::{
-    conf::NumSamples,
     graphics::{
         self, Canvas, Color, DrawMode, DrawParam, FillOptions, LineCap, LineJoin, Mesh, Rect,
         StrokeOptions,
@@ -10,127 +9,143 @@ use ggez::{
 };
 use libosu::{
     beatmap::Beatmap,
-    hitobject::{HitObject, HitObjectKind},
+    hitobject::{HitObject, SliderInfo},
+    math::Point,
     spline::Spline,
 };
 
-use crate::game::SliderCache;
+use super::{Game, SliderCache};
 
-pub fn render_slider<'a>(
-    slider_cache: &'a mut SliderCache,
-    ctx: &mut Context,
-    rect: Rect,
-    beatmap: &Beatmap,
-    slider: &HitObject,
-    color: Color,
-) -> Result<&'a Spline> {
-    let mut control_points = vec![slider.pos];
-    let slider_info = match &slider.kind {
-        HitObjectKind::Slider(info) => info,
-        _ => unreachable!("retard"),
-    };
-    control_points.extend(&slider_info.control_points);
+impl Game {
+    pub fn render_slider<'a>(
+        slider_cache: &'a mut SliderCache,
+        slider_info: &SliderInfo,
+        control_points: &[Point<i32>],
+        ctx: &mut Context,
+        rect: Rect,
+        beatmap: &Beatmap,
+        slider: &HitObject,
+        color: Color,
+    ) -> Result<&'a Spline> {
+        let spline = if slider_cache.contains_key(control_points) {
+            slider_cache.get(control_points).unwrap()
+        } else {
+            let new_spline =
+                Spline::from_control(slider_info.kind, control_points, slider_info.pixel_length);
+            slider_cache.insert(control_points.to_vec(), new_spline);
+            slider_cache.get(control_points).unwrap()
+        };
 
-    let spline = if slider_cache.contains_key(&control_points) {
-        slider_cache.get(&control_points).unwrap()
-    } else {
-        let new_spline =
-            Spline::from_control(slider_info.kind, &control_points, slider_info.pixel_length);
-        slider_cache.insert(control_points.clone(), new_spline);
-        slider_cache.get(&control_points).unwrap()
-    };
+        let cs_scale = rect.w / 640.0;
+        let osupx_scale_x = rect.w as f64 / 512.0;
+        let osupx_scale_y = rect.h as f64 / 384.0;
+        let cs_osupx = beatmap.difficulty.circle_size_osupx() as f64;
+        let cs_real = cs_osupx * cs_scale as f64;
 
-    let cs_scale = rect.w / 640.0;
-    let osupx_scale_x = rect.w as f64 / 512.0;
-    let osupx_scale_y = rect.h as f64 / 384.0;
-    let cs_osupx = beatmap.difficulty.circle_size_osupx() as f64;
-    let cs_real = cs_osupx * cs_scale as f64;
+        let (mut boundx, mut boundy, mut boundw, mut boundh) = (f64::MAX, f64::MAX, 0.0f64, 0.0f64);
+        let spline_mapped = spline
+            .spline_points
+            .iter()
+            .map(|point| {
+                let (x, y) = (point.0, point.1);
+                let x2 = rect.x as f64 + osupx_scale_x * x;
+                let y2 = rect.y as f64 + osupx_scale_y * y;
+                boundx = boundx.min(x2 - cs_osupx);
+                boundy = boundy.min(y2 - cs_osupx);
+                boundw = boundw.max(x2 + cs_osupx - boundx);
+                boundh = boundh.max(y2 + cs_osupx - boundy);
+                [x2 as f32, y2 as f32].into()
+            })
+            .collect::<Vec<Point2<f32>>>();
 
-    let points_mapped = control_points
-        .iter()
-        .map(|point| {
-            let (x, y) = (point.0 as f64, point.1 as f64);
-            let x2 = rect.x as f64 + osupx_scale_x * x;
-            let y2 = rect.y as f64 + osupx_scale_y * y;
-            [x2 as f32, y2 as f32].into()
-        })
-        .collect::<Vec<Point2<_>>>();
-
-    let (mut boundx, mut boundy, mut boundw, mut boundh) = (f64::MAX, f64::MAX, 0.0f64, 0.0f64);
-    let spline_mapped = spline
-        .spline_points
-        .iter()
-        .map(|point| {
-            let (x, y) = (point.0, point.1);
-            let x2 = rect.x as f64 + osupx_scale_x * x;
-            let y2 = rect.y as f64 + osupx_scale_y * y;
-            boundx = boundx.min(x2 - cs_osupx);
-            boundy = boundy.min(y2 - cs_osupx);
-            boundw = boundw.max(x2 + cs_osupx - boundx);
-            boundh = boundh.max(y2 + cs_osupx - boundy);
-            [x2 as f32, y2 as f32].into()
-        })
-        .collect::<Vec<Point2<f32>>>();
-
-    // draw slider border
-    let canvas = Canvas::with_window_size(ctx)?;
-    let opts = StrokeOptions::default()
-        .with_line_cap(LineCap::Round)
-        .with_line_join(LineJoin::Round)
-        .with_line_width(cs_real as f32 * 2.0);
-    let body = Mesh::new_polyline(
-        ctx,
-        DrawMode::Stroke(opts),
-        spline_mapped.as_ref(),
-        graphics::WHITE,
-    )?;
-    graphics::set_canvas(ctx, Some(&canvas));
-    graphics::clear(ctx, Color::new(0.0, 0.0, 0.0, 0.0));
-    graphics::draw(ctx, &body, DrawParam::default())?;
-    graphics::set_canvas(ctx, None);
-    let mut border_color = graphics::WHITE;
-    border_color.a = color.a;
-    graphics::draw(ctx, &canvas, DrawParam::default().color(border_color))?;
-
-    // draw slider body
-    let canvas = Canvas::with_window_size(ctx)?;
-    let opts = StrokeOptions::default()
-        .with_line_cap(LineCap::Round)
-        .with_line_join(LineJoin::Round)
-        .with_line_width(cs_real as f32 * 1.8);
-    let body = Mesh::new_polyline(
-        ctx,
-        DrawMode::Stroke(opts),
-        spline_mapped.as_ref(),
-        graphics::WHITE,
-    )?;
-    graphics::set_canvas(ctx, Some(&canvas));
-    graphics::clear(ctx, Color::new(0.0, 0.0, 0.0, 0.0));
-    graphics::draw(ctx, &body, DrawParam::default())?;
-    graphics::set_canvas(ctx, None);
-    graphics::draw(ctx, &canvas, DrawParam::default().color(color))?;
-
-    // draw control points wireframe
-    let frame = Mesh::new_polyline(
-        ctx,
-        DrawMode::Stroke(StrokeOptions::default()),
-        &points_mapped,
-        graphics::WHITE,
-    )?;
-    graphics::draw(ctx, &frame, DrawParam::default())?;
-
-    // draw points on wireframe
-    for point in points_mapped {
-        let size = 5.0;
-        let rect = Rect::new(point.x - size, point.y - size, size * 2.0, size * 2.0);
-        let rect = Mesh::new_rectangle(
+        // draw slider border
+        let canvas = Canvas::with_window_size(ctx)?;
+        let opts = StrokeOptions::default()
+            .with_line_cap(LineCap::Round)
+            .with_line_join(LineJoin::Round)
+            .with_line_width(cs_real as f32 * 2.0);
+        let body = Mesh::new_polyline(
             ctx,
-            DrawMode::Fill(FillOptions::default()),
-            rect,
+            DrawMode::Stroke(opts),
+            spline_mapped.as_ref(),
             graphics::WHITE,
         )?;
-        graphics::draw(ctx, &rect, DrawParam::default())?;
+        graphics::set_canvas(ctx, Some(&canvas));
+        graphics::clear(ctx, Color::new(0.0, 0.0, 0.0, 0.0));
+        graphics::draw(ctx, &body, DrawParam::default())?;
+        graphics::set_canvas(ctx, None);
+        let mut border_color = graphics::WHITE;
+        border_color.a = color.a;
+        graphics::draw(ctx, &canvas, DrawParam::default().color(border_color))?;
+
+        // draw slider body
+        let canvas = Canvas::with_window_size(ctx)?;
+        let opts = StrokeOptions::default()
+            .with_line_cap(LineCap::Round)
+            .with_line_join(LineJoin::Round)
+            .with_line_width(cs_real as f32 * 1.8);
+        let body = Mesh::new_polyline(
+            ctx,
+            DrawMode::Stroke(opts),
+            spline_mapped.as_ref(),
+            graphics::WHITE,
+        )?;
+        graphics::set_canvas(ctx, Some(&canvas));
+        graphics::clear(ctx, Color::new(0.0, 0.0, 0.0, 0.0));
+        graphics::draw(ctx, &body, DrawParam::default())?;
+        graphics::set_canvas(ctx, None);
+        graphics::draw(ctx, &canvas, DrawParam::default().color(color))?;
+
+        Ok(spline)
     }
 
-    Ok(spline)
+    pub fn render_slider_wireframe(
+        ctx: &mut Context,
+        control_points: &[Point<i32>],
+        rect: Rect,
+    ) -> Result<()> {
+        let osupx_scale_x = rect.w as f64 / 512.0;
+        let osupx_scale_y = rect.h as f64 / 384.0;
+
+        let points_mapped = control_points
+            .iter()
+            .map(|point| {
+                let (x, y) = (point.0 as f64, point.1 as f64);
+                let x2 = rect.x as f64 + osupx_scale_x * x;
+                let y2 = rect.y as f64 + osupx_scale_y * y;
+                [x2 as f32, y2 as f32].into()
+            })
+            .collect::<Vec<Point2<_>>>();
+
+        // draw control points wireframe
+        let frame = Mesh::new_polyline(
+            ctx,
+            DrawMode::Stroke(StrokeOptions::default()),
+            &points_mapped,
+            graphics::WHITE,
+        )?;
+        graphics::draw(ctx, &frame, DrawParam::default())?;
+
+        // draw points on wireframe
+        let mut i = 0;
+        while i < points_mapped.len() {
+            let fst = points_mapped[i];
+            let mut color = graphics::WHITE;
+            if i < points_mapped.len() - 1 {
+                let snd = points_mapped[i + 1];
+                if fst.eq(&snd) {
+                    i += 1;
+                    color = Color::new(1.0, 0.0, 0.0, 1.0);
+                }
+            }
+            let size = 5.0;
+            let rect = Rect::new(fst.x - size, fst.y - size, size * 2.0, size * 2.0);
+            let rect =
+                Mesh::new_rectangle(ctx, DrawMode::Fill(FillOptions::default()), rect, color)?;
+            graphics::draw(ctx, &rect, DrawParam::default())?;
+            i += 1;
+        }
+
+        Ok(())
+    }
 }

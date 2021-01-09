@@ -69,6 +69,14 @@ impl Sound {
         self.handle
     }
 
+    pub fn length(&self) -> Result<f64> {
+        let length = unsafe {
+            let bytes = bass::BASS_ChannelGetLength(self.handle, BASS_POS_BYTE);
+            bass::BASS_ChannelBytes2Seconds(self.handle, bytes)
+        };
+        Ok(length)
+    }
+
     pub fn position(&self) -> Result<f64> {
         let time = unsafe {
             let pos_bytes = bass::BASS_ChannelGetPosition(self.handle, BASS_POS_BYTE);

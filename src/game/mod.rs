@@ -1,4 +1,5 @@
 mod grid;
+mod seeker;
 mod sliders;
 mod timeline;
 
@@ -25,10 +26,7 @@ use crate::beatmap::{BeatmapExt, STACK_DISTANCE};
 use crate::hitobject::HitObjectExt;
 use crate::skin::Skin;
 
-use self::sliders::render_slider;
-
 pub const PLAYFIELD_BOUNDS: Rect = Rect::new(112.0, 112.0, 800.0, 600.0);
-pub const SEEKER_BOUNDS: Rect = Rect::new(46.0, 722.0, 932.0, 36.0);
 
 pub type SliderCache = HashMap<Vec<Point<i32>>, Spline>;
 
@@ -185,17 +183,22 @@ impl Game {
 
             let mut slider_info = None;
             if let HitObjectKind::Slider(info) = &ho.inner.kind {
+                let mut control_points = vec![ho.inner.pos];
+                control_points.extend(&info.control_points);
+
                 let mut color = color.clone();
                 color.a = 0.6 * draw_info.opacity as f32;
-                let spline = render_slider(
+                let spline = Game::render_slider(
                     &mut self.slider_cache,
+                    info,
+                    control_points.as_ref(),
                     ctx,
                     PLAYFIELD_BOUNDS,
                     &self.beatmap.inner,
                     &ho.inner,
                     color,
                 )?;
-                slider_info = Some((info, spline));
+                slider_info = Some((info, control_points, spline));
 
                 let end_pos = ho.inner.end_pos().unwrap();
                 let end_pos = [
@@ -225,7 +228,9 @@ impl Game {
                 DrawParam::default().dest(pos),
             )?;
 
-            if let Some((info, spline)) = slider_info {
+            if let Some((info, control_points, spline)) = slider_info {
+                Game::render_slider_wireframe(ctx, &control_points, PLAYFIELD_BOUNDS)?;
+
                 if time > ho_time && time < draw_info.end_time {
                     let elapsed_time = time - ho_time;
                     let total_duration = draw_info.end_time - ho_time;
@@ -262,6 +267,8 @@ impl Game {
                 )?;
             }
         }
+
+        self.draw_seeker(ctx)?;
 
         graphics::present(ctx)?;
         self.frame += 1;
