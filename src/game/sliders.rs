@@ -72,12 +72,32 @@ pub fn render_slider<'a>(
         })
         .collect::<Vec<Point2<f32>>>();
 
-    // draw slider body
+    // draw slider border
     let canvas = Canvas::with_window_size(ctx)?;
     let opts = StrokeOptions::default()
         .with_line_cap(LineCap::Round)
         .with_line_join(LineJoin::Round)
         .with_line_width(cs_real as f32 * 2.0);
+    let body = Mesh::new_polyline(
+        ctx,
+        DrawMode::Stroke(opts),
+        spline_mapped.as_ref(),
+        graphics::WHITE,
+    )?;
+    graphics::set_canvas(ctx, Some(&canvas));
+    graphics::clear(ctx, Color::new(0.0, 0.0, 0.0, 0.0));
+    graphics::draw(ctx, &body, DrawParam::default())?;
+    graphics::set_canvas(ctx, None);
+    let mut border_color = graphics::WHITE;
+    border_color.a = color.a;
+    graphics::draw(ctx, &canvas, DrawParam::default().color(border_color))?;
+
+    // draw slider body
+    let canvas = Canvas::with_window_size(ctx)?;
+    let opts = StrokeOptions::default()
+        .with_line_cap(LineCap::Round)
+        .with_line_join(LineJoin::Round)
+        .with_line_width(cs_real as f32 * 1.8);
     let body = Mesh::new_polyline(
         ctx,
         DrawMode::Stroke(opts),

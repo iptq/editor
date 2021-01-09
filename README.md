@@ -16,8 +16,6 @@ wrapper script isn't written yet, in this case i just copied bass.dll to the pro
 roadmap
 -------
 
-- [ ] stacking
-- [ ] fix slider overlap problem
 - [ ] long term:
   - [ ] new framework
 

@@ -172,8 +172,8 @@ impl Game {
             let ho_time = (ho.inner.start_time.0 as f64) / 1000.0;
             let stacking = ho.stacking as f32 * STACK_DISTANCE as f32;
             let pos = [
-                PLAYFIELD_BOUNDS.x + osupx_scale_x * ho.inner.pos.0 as f32 - stacking,
-                PLAYFIELD_BOUNDS.y + osupx_scale_y * ho.inner.pos.1 as f32 - stacking,
+                PLAYFIELD_BOUNDS.x + osupx_scale_x * (ho.inner.pos.0 as f32 - stacking),
+                PLAYFIELD_BOUNDS.y + osupx_scale_y * (ho.inner.pos.1 as f32 - stacking),
             ];
             let color = draw_info.color;
 
