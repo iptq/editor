@@ -9,7 +9,6 @@ mod beatmap;
 mod game;
 mod hit_object;
 mod skin;
-mod slider_render;
 
 use std::env;
 

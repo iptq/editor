@@ -1,4 +1,5 @@
 mod timeline;
+mod sliders;
 
 use std::collections::HashMap;
 use std::fs::File;
@@ -21,7 +22,8 @@ use crate::audio::{AudioEngine, Sound};
 use crate::beatmap::{BeatmapExt, STACK_DISTANCE};
 use crate::hit_object::HitObjectExt;
 use crate::skin::Skin;
-use crate::slider_render::render_slider;
+
+use self::sliders::render_slider;
 
 pub type SliderCache = HashMap<Vec<Point<i32>>, Spline>;
 
