@@ -3,7 +3,7 @@ mod seeker;
 mod sliders;
 mod timeline;
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::fs::File;
 use std::io::Read;
 use std::path::Path;
@@ -40,6 +40,7 @@ pub struct Game {
     frame: usize,
     slider_cache: SliderCache,
 
+    keymap: HashSet<KeyCode>,
     current_uninherited_timing_point: Option<TimingPoint>,
     current_inherited_timing_point: Option<TimingPoint>,
 }
@@ -61,6 +62,7 @@ impl Game {
             frame: 0,
             slider_cache: SliderCache::default(),
 
+            keymap: HashSet::new(),
             current_uninherited_timing_point: None,
             current_inherited_timing_point: None,
         })
@@ -366,14 +368,37 @@ impl EventHandler for Game {
         };
     }
 
-    fn key_down_event(&mut self, _: &mut Context, keycode: KeyCode, _: KeyMods, _: bool) {
+    fn key_down_event(&mut self, _: &mut Context, keycode: KeyCode, mods: KeyMods, _: bool) {
         use KeyCode::*;
+        self.keymap.insert(keycode);
         match keycode {
             Left => {
-                self.seek_by_steps(-1);
+                if let Some(TimingPoint {
+                    kind: TimingPointKind::Uninherited(info),
+                    ..
+                }) = &self.current_uninherited_timing_point
+                {
+                    let steps = -1 * if mods.contains(KeyMods::SHIFT) {
+                        info.meter as i32
+                    } else {
+                        1
+                    };
+                    self.seek_by_steps(steps);
+                }
             }
             Right => {
-                self.seek_by_steps(1);
+                if let Some(TimingPoint {
+                    kind: TimingPointKind::Uninherited(info),
+                    ..
+                }) = &self.current_uninherited_timing_point
+                {
+                    let steps =  if mods.contains(KeyMods::SHIFT) {
+                        info.meter as i32
+                    } else {
+                        1
+                    };
+                    self.seek_by_steps(steps);
+                }
             }
             _ => {}
         };
