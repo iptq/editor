@@ -19,7 +19,7 @@ use libosu::{
     hitobject::{HitObjectKind, SpinnerInfo},
     math::Point,
     spline::Spline,
-    timing::TimingPointKind,
+    timing::{TimingPoint, TimingPointKind},
 };
 
 use crate::audio::{AudioEngine, Sound};
@@ -39,6 +39,9 @@ pub struct Game {
     pub skin: Skin,
     frame: usize,
     slider_cache: SliderCache,
+
+    current_uninherited_timing_point: Option<TimingPoint>,
+    current_inherited_timing_point: Option<TimingPoint>,
 }
 
 impl Game {
@@ -57,6 +60,9 @@ impl Game {
             skin,
             frame: 0,
             slider_cache: SliderCache::default(),
+
+            current_uninherited_timing_point: None,
+            current_inherited_timing_point: None,
         })
     }
 
@@ -273,35 +279,73 @@ impl Game {
 
         graphics::present(ctx)?;
         self.frame += 1;
+        if self.is_playing {
+            self.timestamp_changed()?;
+        }
+
         Ok(())
     }
 
-    fn seek_by_steps(&self, n: i32) -> Result<()> {
+    fn timestamp_changed(&mut self) -> Result<()> {
+        if let Some(song) = &self.song {
+            let pos = song.position()?;
+
+            let mut found_uninherited = false;
+            let mut found_inherited = false;
+            for timing_point in self.beatmap.inner.timing_points.iter() {
+                if timing_point.time.as_seconds() > pos {
+                    continue;
+                }
+
+                match &timing_point.kind {
+                    TimingPointKind::Uninherited(_) => {
+                        self.current_uninherited_timing_point = Some(timing_point.clone());
+                        found_uninherited = true;
+                    }
+                    TimingPointKind::Inherited(_) => {
+                        self.current_inherited_timing_point = Some(timing_point.clone());
+                        found_inherited = true;
+                    }
+                }
+
+                if found_inherited && found_uninherited {
+                    break;
+                }
+            }
+        }
+
+        Ok(())
+    }
+
+    fn seek_by_steps(&mut self, n: i32) -> Result<()> {
         if let Some(song) = &self.song {
             let pos = song.position()?;
             let mut delta = None;
-            for timing_point in self.beatmap.inner.timing_points.iter() {
-                if let TimingPointKind::Uninherited(info) = &timing_point.kind {
-                    if pos > timing_point.time.as_seconds() {
-                        let diff = pos - timing_point.time.as_seconds();
-                        let tick = info.mpb / 1000.0 / info.meter as f64;
-                        let beats = (diff / tick).round();
-                        let frac = diff - beats * tick;
-                        if frac.abs() < 0.0001 {
-                            delta = Some(n as f64 * tick);
+            if let Some(TimingPoint {
+                kind: TimingPointKind::Uninherited(info),
+                time,
+                ..
+            }) = &self.current_uninherited_timing_point
+            {
+                if pos > time.as_seconds() {
+                    let diff = pos - time.as_seconds();
+                    let tick = info.mpb / 1000.0 / info.meter as f64;
+                    let beats = (diff / tick).round();
+                    let frac = diff - beats * tick;
+                    if frac.abs() < 0.0001 {
+                        delta = Some(n as f64 * tick);
+                    } else {
+                        if n > 0 {
+                            delta = Some((n - 1) as f64 * tick + (tick - frac));
                         } else {
-                            if n > 0 {
-                                delta = Some((n - 1) as f64 * tick + (tick - frac));
-                            } else {
-                                delta = Some((n - 1) as f64 * tick - frac);
-                            }
+                            delta = Some((n - 1) as f64 * tick - frac);
                         }
-                        break;
                     }
                 }
             }
             if let Some(delta) = delta {
                 song.set_position(pos + delta)?;
+                self.timestamp_changed()?;
             }
         }
         Ok(())
