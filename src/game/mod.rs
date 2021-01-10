@@ -84,6 +84,7 @@ impl Game {
 
         let song = Sound::create(dir.join(&self.beatmap.inner.audio_filename))?;
         self.song = Some(song);
+        self.timestamp_changed()?;
 
         Ok(())
     }
@@ -292,10 +293,18 @@ impl Game {
         if let Some(song) = &self.song {
             let pos = song.position()?;
 
+            if let Some(timing_point) = self.beatmap.inner.timing_points.first() {
+                if pos < timing_point.time.as_seconds() {
+                    if let TimingPointKind::Uninherited(_) = &timing_point.kind {
+                        self.current_uninherited_timing_point = Some(timing_point.clone());
+                    }
+                }
+            }
+
             let mut found_uninherited = false;
             let mut found_inherited = false;
             for timing_point in self.beatmap.inner.timing_points.iter() {
-                if timing_point.time.as_seconds() > pos {
+                if pos < timing_point.time.as_seconds() {
                     continue;
                 }
 
@@ -329,19 +338,17 @@ impl Game {
                 ..
             }) = &self.current_uninherited_timing_point
             {
-                if pos > time.as_seconds() {
-                    let diff = pos - time.as_seconds();
-                    let tick = info.mpb / 1000.0 / info.meter as f64;
-                    let beats = (diff / tick).round();
-                    let frac = diff - beats * tick;
-                    if frac.abs() < 0.0001 {
-                        delta = Some(n as f64 * tick);
+                let diff = pos - time.as_seconds();
+                let tick = info.mpb / 1000.0 / info.meter as f64;
+                let beats = (diff / tick).round();
+                let frac = diff - beats * tick;
+                if frac.abs() < 0.0001 {
+                    delta = Some(n as f64 * tick);
+                } else {
+                    if n > 0 {
+                        delta = Some((n - 1) as f64 * tick + (tick - frac));
                     } else {
-                        if n > 0 {
-                            delta = Some((n - 1) as f64 * tick + (tick - frac));
-                        } else {
-                            delta = Some((n - 1) as f64 * tick - frac);
-                        }
+                        delta = Some((n - 1) as f64 * tick - frac);
                     }
                 }
             }
@@ -378,11 +385,12 @@ impl EventHandler for Game {
                     ..
                 }) = &self.current_uninherited_timing_point
                 {
-                    let steps = -1 * if mods.contains(KeyMods::SHIFT) {
-                        info.meter as i32
-                    } else {
-                        1
-                    };
+                    let steps = -1
+                        * if mods.contains(KeyMods::SHIFT) {
+                            info.meter as i32
+                        } else {
+                            1
+                        };
                     self.seek_by_steps(steps);
                 }
             }
@@ -392,7 +400,7 @@ impl EventHandler for Game {
                     ..
                 }) = &self.current_uninherited_timing_point
                 {
-                    let steps =  if mods.contains(KeyMods::SHIFT) {
+                    let steps = if mods.contains(KeyMods::SHIFT) {
                         info.meter as i32
                     } else {
                         1
