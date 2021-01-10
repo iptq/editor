@@ -59,4 +59,14 @@ impl Game {
 
         Ok(())
     }
+
+    pub(super) fn toggle_grid(&mut self) {
+        use libosu::enums::GridSize::*;
+        self.beatmap.inner.grid_size = match self.beatmap.inner.grid_size {
+            Tiny => Small,
+            Small => Medium,
+            Medium => Large,
+            Large => Tiny,
+        };
+    }
 }

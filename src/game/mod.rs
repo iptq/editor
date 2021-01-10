@@ -399,6 +399,9 @@ impl EventHandler for Game {
         match keycode {
             Space => self.toggle_playing(),
             Colon => {}
+            G => {
+                self.toggle_grid();
+            }
             _ => {}
         };
     }
