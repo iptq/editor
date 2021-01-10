@@ -64,12 +64,8 @@ impl Texture {
 
             self.animation.clear();
             let mut curr = 0;
-            loop {
-                let image = match Image::new(ctx, &format!("/{}{}{}.png", self.name, hyphen, curr))
-                {
-                    Ok(v) => v,
-                    Err(_) => break,
-                };
+            while let Ok(image) = Image::new(ctx, &format!("/{}{}{}.png", self.name, hyphen, curr))
+            {
                 self.animation.push(image);
                 found = true;
                 curr += 1;

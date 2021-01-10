@@ -95,13 +95,16 @@ impl Game {
                     }
 
                     'outer: loop {
-                        for i in 0..last_uninherited.meter as usize {
+                        for (i, (color, height)) in ticks
+                            .iter()
+                            .enumerate()
+                            .take(last_uninherited.meter as usize)
+                        {
                             let tick_time = time + beat * i as f64 / last_uninherited.meter as f64;
                             if tick_time > right_limit {
                                 break 'outer;
                             }
 
-                            let (color, height) = ticks[i];
                             let percent =
                                 (tick_time - timeline_left) / (timeline_right - timeline_left);
                             let x = percent as f32 * BOUNDS.w + BOUNDS.x;
@@ -111,7 +114,7 @@ impl Game {
                                 ctx,
                                 &[Point2::new(x, y1), Point2::new(x, y2)],
                                 1.0,
-                                color,
+                                *color,
                             )?;
                             graphics::draw(ctx, &tick, DrawParam::default())?;
                         }

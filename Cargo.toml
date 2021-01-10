@@ -25,3 +25,6 @@ structopt = "0.3.21"
 [dependencies.libosu]
 git = "https://github.com/iptq/libosu"
 rev = "557d0a321405516f12c3939c1207c7341f796f35"
+
+[features]
+clippy = []

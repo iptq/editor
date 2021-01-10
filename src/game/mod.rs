@@ -90,7 +90,7 @@ impl Game {
         self.beatmap = BeatmapExt::new(beatmap);
         self.beatmap.compute_stacking();
 
-        if self.beatmap.inner.colors.len() > 0 {
+        if !self.beatmap.inner.colors.is_empty() {
             self.combo_colors.clear();
             self.combo_colors = self
                 .beatmap
@@ -224,7 +224,7 @@ impl Game {
                 let mut control_points = vec![ho.inner.pos];
                 control_points.extend(&info.control_points);
 
-                let mut color = color.clone();
+                let mut color = color;
                 color.a = 0.6 * draw_info.opacity as f32;
                 let spline = Game::render_slider(
                     &mut self.slider_cache,
@@ -372,12 +372,10 @@ impl Game {
                 let frac = diff - beats * tick;
                 if frac.abs() < 0.0001 {
                     delta = Some(n as f64 * tick);
+                } else if n > 0 {
+                    delta = Some((n - 1) as f64 * tick + (tick - frac));
                 } else {
-                    if n > 0 {
-                        delta = Some((n - 1) as f64 * tick + (tick - frac));
-                    } else {
-                        delta = Some((n - 1) as f64 * tick - frac);
-                    }
+                    delta = Some((n - 1) as f64 * tick - frac);
                 }
             }
             if let Some(delta) = delta {
@@ -416,13 +414,12 @@ impl EventHandler for Game {
                     ..
                 }) = &self.current_uninherited_timing_point
                 {
-                    let steps = -1
-                        * if mods.contains(KeyMods::SHIFT) {
-                            info.meter as i32
-                        } else {
-                            1
-                        };
-                    self.seek_by_steps(steps);
+                    let steps = -if mods.contains(KeyMods::SHIFT) {
+                        info.meter as i32
+                    } else {
+                        1
+                    };
+                    self.seek_by_steps(steps).unwrap();
                 }
             }
             Right => {
@@ -436,7 +433,7 @@ impl EventHandler for Game {
                     } else {
                         1
                     };
-                    self.seek_by_steps(steps);
+                    self.seek_by_steps(steps).unwrap();
                 }
             }
             _ => {}
