@@ -29,8 +29,8 @@ impl Game {
 
             for timing_point in self.beatmap.inner.timing_points.iter() {
                 let color = match timing_point.kind {
-                    TimingPointKind::Inherited(_) => Color::new(0.0, 1.0, 0.0, 0.5),
-                    TimingPointKind::Uninherited(_) => Color::new(1.0, 0.0, 0.0, 0.5),
+                    TimingPointKind::Inherited(_) => Color::new(0.0, 0.8, 0.0, 0.5),
+                    TimingPointKind::Uninherited(_) => Color::new(0.8, 0.0, 0.0, 0.5),
                 };
 
                 let percent = timing_point.time.as_seconds() / len;

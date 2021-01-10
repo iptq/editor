@@ -1,3 +1,4 @@
+use ggez::graphics::Color;
 use libosu::{beatmap::Beatmap, hitobject::HitObjectKind, math::Point};
 
 use crate::hitobject::HitObjectExt;
@@ -21,13 +22,13 @@ impl BeatmapExt {
         BeatmapExt { inner, hit_objects }
     }
 
-    pub fn compute_colors(&mut self) {
+    pub fn compute_colors(&mut self, colors: &[Color]) {
         let mut color_idx = 0;
         let mut number = 1;
         for ho in self.hit_objects.iter_mut() {
             if ho.inner.new_combo {
                 number = 1;
-                color_idx = (color_idx + 1) % self.inner.colors.len();
+                color_idx = (color_idx + 1) % colors.len();
             }
 
             ho.number = number;
@@ -37,7 +38,9 @@ impl BeatmapExt {
     }
 
     pub fn compute_stacking(&mut self) {
-        self.compute_stacking_inner(0, self.hit_objects.len() - 1)
+        if self.inner.stack_leniency > 0.0 {
+            self.compute_stacking_inner(0, self.hit_objects.len() - 1)
+        }
     }
 
     fn compute_stacking_inner(&mut self, start_idx: usize, end_idx: usize) {

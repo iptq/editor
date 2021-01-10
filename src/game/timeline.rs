@@ -157,13 +157,7 @@ impl Game {
             .get_hitobject_end_time(&ho.inner)
             .as_seconds();
 
-        let color = self.beatmap.inner.colors[ho.color_idx];
-        let color = graphics::Color::new(
-            color.red as f32 / 256.0,
-            color.green as f32 / 256.0,
-            color.blue as f32 / 256.0,
-            1.0,
-        );
+        let color = self.combo_colors[ho.color_idx];
 
         if end_time >= timeline_left && start_time <= timeline_right {
             let timeline_percent = (start_time - timeline_left) / (timeline_right - timeline_left);

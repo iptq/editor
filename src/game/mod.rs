@@ -28,6 +28,12 @@ use crate::hitobject::HitObjectExt;
 use crate::skin::Skin;
 
 pub const PLAYFIELD_BOUNDS: Rect = Rect::new(112.0, 122.0, 800.0, 600.0);
+pub const DEFAULT_COLORS: &[(f32, f32, f32)] = &[
+    (1.0, 0.75, 0.0),
+    (0.0, 0.8, 0.0),
+    (0.07, 0.5, 1.0),
+    (0.95, 0.1, 0.22),
+];
 
 pub type SliderCache = HashMap<Vec<Point<i32>>, Spline>;
 
@@ -39,6 +45,7 @@ pub struct Game {
     pub skin: Skin,
     frame: usize,
     slider_cache: SliderCache,
+    combo_colors: Vec<Color>,
 
     keymap: HashSet<KeyCode>,
     current_uninherited_timing_point: Option<TimingPoint>,
@@ -61,6 +68,10 @@ impl Game {
             skin,
             frame: 0,
             slider_cache: SliderCache::default(),
+            combo_colors: DEFAULT_COLORS
+                .iter()
+                .map(|(r, g, b)| Color::new(*r, *g, *b, 1.0))
+                .collect(),
 
             keymap: HashSet::new(),
             current_uninherited_timing_point: None,
@@ -77,8 +88,31 @@ impl Game {
 
         let beatmap = Beatmap::from_osz(&contents)?;
         self.beatmap = BeatmapExt::new(beatmap);
-        self.beatmap.compute_colors();
         self.beatmap.compute_stacking();
+
+        if self.beatmap.inner.colors.len() > 0 {
+            self.combo_colors.clear();
+            self.combo_colors = self
+                .beatmap
+                .inner
+                .colors
+                .iter()
+                .map(|color| {
+                    Color::new(
+                        color.red as f32 / 255.0,
+                        color.green as f32 / 255.0,
+                        color.blue as f32 / 255.0,
+                        1.0,
+                    )
+                })
+                .collect();
+        } else {
+            self.combo_colors = DEFAULT_COLORS
+                .iter()
+                .map(|(r, g, b)| Color::new(*r, *g, *b, 1.0))
+                .collect();
+        }
+        self.beatmap.compute_colors(&self.combo_colors);
 
         let dir = path.parent().unwrap();
 
@@ -134,13 +168,7 @@ impl Game {
         // keeping track of the old index will probably be much faster
         for ho in self.beatmap.hit_objects.iter().rev() {
             let ho_time = (ho.inner.start_time.0 as f64) / 1000.0;
-            let color = self.beatmap.inner.colors[ho.color_idx];
-            let color = graphics::Color::new(
-                color.red as f32 / 256.0,
-                color.green as f32 / 256.0,
-                color.blue as f32 / 256.0,
-                1.0,
-            );
+            let color = self.combo_colors[ho.color_idx];
 
             // draw in timeline
             self.draw_hitobject_to_timeline(ctx, time, ho)?;
