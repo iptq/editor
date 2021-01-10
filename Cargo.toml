@@ -10,6 +10,7 @@ debug = true
 [workspace]
 members = [
     "bass-sys",
+    "framework",
 ]
 
 [dependencies]
