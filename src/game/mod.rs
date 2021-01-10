@@ -285,11 +285,16 @@ impl Game {
                     if pos > timing_point.time.as_seconds() {
                         let diff = pos - timing_point.time.as_seconds();
                         let tick = info.mpb / 1000.0 / info.meter as f64;
-                        if (diff / tick).abs() < 0.001 {
+                        let beats = (diff / tick).round();
+                        let frac = diff - beats * tick;
+                        if frac.abs() < 0.0001 {
                             delta = Some(n as f64 * tick);
                         } else {
-                            let tick = info.mpb / 1000.0;
-                            delta = Some(n as f64 * tick);
+                            if n > 0 {
+                                delta = Some((n - 1) as f64 * tick + (tick - frac));
+                            } else {
+                                delta = Some((n - 1) as f64 * tick - frac);
+                            }
                         }
                         break;
                     }
