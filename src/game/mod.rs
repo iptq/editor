@@ -19,6 +19,7 @@ use libosu::{
     hitobject::{HitObjectKind, SpinnerInfo},
     math::Point,
     spline::Spline,
+    timing::TimingPointKind,
 };
 
 use crate::audio::{AudioEngine, Sound};
@@ -26,7 +27,7 @@ use crate::beatmap::{BeatmapExt, STACK_DISTANCE};
 use crate::hitobject::HitObjectExt;
 use crate::skin::Skin;
 
-pub const PLAYFIELD_BOUNDS: Rect = Rect::new(112.0, 112.0, 800.0, 600.0);
+pub const PLAYFIELD_BOUNDS: Rect = Rect::new(112.0, 122.0, 800.0, 600.0);
 
 pub type SliderCache = HashMap<Vec<Point<i32>>, Spline>;
 
@@ -274,6 +275,32 @@ impl Game {
         self.frame += 1;
         Ok(())
     }
+
+    fn seek_by_steps(&self, n: i32) -> Result<()> {
+        if let Some(song) = &self.song {
+            let pos = song.position()?;
+            let mut delta = None;
+            for timing_point in self.beatmap.inner.timing_points.iter() {
+                if let TimingPointKind::Uninherited(info) = &timing_point.kind {
+                    if pos > timing_point.time.as_seconds() {
+                        let diff = pos - timing_point.time.as_seconds();
+                        let tick = info.mpb / 1000.0 / info.meter as f64;
+                        if (diff / tick).abs() < 0.001 {
+                            delta = Some(n as f64 * tick);
+                        } else {
+                            let tick = info.mpb / 1000.0;
+                            delta = Some(n as f64 * tick);
+                        }
+                        break;
+                    }
+                }
+            }
+            if let Some(delta) = delta {
+                song.set_position(pos + delta)?;
+            }
+        }
+        Ok(())
+    }
 }
 
 impl EventHandler for Game {
@@ -287,7 +314,20 @@ impl EventHandler for Game {
             Space => self.toggle_playing(),
             Colon => {}
             _ => {}
-        }
+        };
+    }
+
+    fn key_down_event(&mut self, _: &mut Context, keycode: KeyCode, _: KeyMods, _: bool) {
+        use KeyCode::*;
+        match keycode {
+            Left => {
+                self.seek_by_steps(-1);
+            }
+            Right => {
+                self.seek_by_steps(1);
+            }
+            _ => {}
+        };
     }
 
     fn draw(&mut self, ctx: &mut Context) -> GameResult {

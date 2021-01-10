@@ -4,6 +4,9 @@ version = "0.1.0"
 authors = ["Michael Zhang <mail@mzhang.io>"]
 edition = "2018"
 
+[profile.release]
+debug = true
+
 [workspace]
 members = [
     "bass-sys",
@@ -21,4 +24,4 @@ structopt = "0.3.21"
 
 [dependencies.libosu]
 git = "https://github.com/iptq/libosu"
-rev = "7f5e8fd6bdf2798dd40df9595ce630ebc27ac13e"
+rev = "7fbe7afbad55b25398062719ebaccbff0387d139"
