@@ -42,18 +42,31 @@ pub const DEFAULT_COLORS: &[(f32, f32, f32)] = &[
 
 pub type SliderCache = HashMap<Vec<Point<i32>>, Spline>;
 
+pub enum Tool {
+    Select,
+    Circle,
+    Slider,
+    SliderPlacing,
+}
+
 pub struct Game {
     is_playing: bool,
     audio_engine: AudioEngine,
     song: Option<Sound>,
     beatmap: BeatmapExt,
     pub skin: Skin,
+    background_image: Option<Image>,
+
     frame: usize,
     slider_cache: SliderCache,
     combo_colors: Vec<Color>,
-    background_image: Option<Image>,
+    selected_objects: Vec<usize>,
+    tool: Tool,
 
     keymap: HashSet<KeyCode>,
+    mouse_pos: (f32, f32),
+    left_drag_start: Option<(f32, f32)>,
+    right_drag_start: Option<(f32, f32)>,
     current_uninherited_timing_point: Option<TimingPoint>,
     current_inherited_timing_point: Option<TimingPoint>,
 }
@@ -79,8 +92,12 @@ impl Game {
                 .map(|(r, g, b)| Color::new(*r, *g, *b, 1.0))
                 .collect(),
             background_image: None,
-
+            selected_objects: vec![],
             keymap: HashSet::new(),
+            mouse_pos: (-1.0, -1.0),
+            left_drag_start: None,
+            right_drag_start: None,
+            tool: Tool::Select,
             current_uninherited_timing_point: None,
             current_inherited_timing_point: None,
         })
@@ -175,7 +192,7 @@ impl Game {
         self.draw_grid(ctx)?;
 
         let time = self.song.as_ref().unwrap().position()?;
-        let text = Text::new(format!("time: {}", time).as_ref());
+        let text = Text::new(format!("time: {:.4}, mouse: {:?}", time, self.mouse_pos).as_ref());
         graphics::queue_text(ctx, &text, [0.0, 0.0], Some(WHITE));
         graphics::draw_queued_text(ctx, DrawParam::default(), None, FilterMode::Linear)?;
 
@@ -308,6 +325,7 @@ impl Game {
                     let finished_repeats = (elapsed_time / single_duration).floor();
                     let this_repeat_time = elapsed_time - finished_repeats * single_duration;
                     let mut travel_percent = this_repeat_time / single_duration;
+
                     // reverse direction on odd trips
                     if finished_repeats as u32 % 2 == 1 {
                         travel_percent = 1.0 - travel_percent;
@@ -339,6 +357,29 @@ impl Game {
         }
 
         self.draw_seeker(ctx)?;
+
+        // draw whatever tool user is using
+        let (mx, my) = self.mouse_pos;
+        match self.tool {
+            Tool::Circle => {
+                let b = PLAYFIELD_BOUNDS;
+                if mx > b.x && mx < b.x + b.h && my > b.y && my < b.y + b.h {
+                    let pos = [mx, my];
+                    let color = Color::new(1.0, 1.0, 1.0, 0.4);
+                    self.skin.hitcircle.draw(
+                        ctx,
+                        (cs_real * 2.0, cs_real * 2.0),
+                        DrawParam::default().dest(pos).color(color),
+                    )?;
+                    self.skin.hitcircleoverlay.draw(
+                        ctx,
+                        (cs_real * 2.0, cs_real * 2.0),
+                        DrawParam::default().dest(pos).color(color),
+                    )?;
+                }
+            }
+            _ => {}
+        }
 
         graphics::present(ctx)?;
         self.frame += 1;
@@ -417,6 +458,10 @@ impl Game {
         }
         Ok(())
     }
+
+    fn handle_click(&mut self, btn: MouseButton, x: f32, y: f32) -> Result<()> {
+        Ok(())
+    }
 }
 
 impl EventHandler for Game {
@@ -424,7 +469,53 @@ impl EventHandler for Game {
         Ok(())
     }
 
-    fn mouse_button_down_event(&mut self, ctx: &mut Context, _: MouseButton, x: f32, y: f32) {}
+    fn mouse_motion_event(&mut self, _: &mut Context, x: f32, y: f32, _: f32, _: f32) {
+        self.mouse_pos = (x, y);
+    }
+
+    fn mouse_button_down_event(&mut self, _: &mut Context, btn: MouseButton, x: f32, y: f32) {
+        match btn {
+            MouseButton::Left => {
+                use self::seeker::BOUNDS;
+                if x > BOUNDS.x
+                    && x < BOUNDS.x + BOUNDS.w
+                    && y > BOUNDS.y
+                    && y < BOUNDS.y + BOUNDS.h
+                {
+                    let jump_percent = (x - BOUNDS.x) / BOUNDS.w;
+                    if let Some(song) = &self.song {
+                        let pos = jump_percent as f64 * song.length().unwrap();
+                        song.set_position(pos);
+                    }
+                }
+                self.left_drag_start = Some((x, y));
+            }
+            MouseButton::Right => self.right_drag_start = Some((x, y)),
+            _ => {}
+        }
+    }
+
+    fn mouse_button_up_event(&mut self, _: &mut Context, btn: MouseButton, x: f32, y: f32) {
+        match btn {
+            MouseButton::Left => {
+                if let Some((px, py)) = self.left_drag_start {
+                    if px == x && py == y {
+                        self.handle_click(MouseButton::Left, x, y).unwrap();
+                    }
+                }
+                self.left_drag_start = None;
+            }
+            MouseButton::Right => {
+                if let Some((px, py)) = self.right_drag_start {
+                    if px == x && py == y {
+                        self.handle_click(MouseButton::Right, x, y).unwrap();
+                    }
+                }
+                self.right_drag_start = None;
+            }
+            _ => {}
+        }
+    }
 
     fn key_up_event(&mut self, _: &mut Context, keycode: KeyCode, _: KeyMods) {
         use KeyCode::*;
@@ -442,6 +533,10 @@ impl EventHandler for Game {
         use KeyCode::*;
         self.keymap.insert(keycode);
         match keycode {
+            Key1 => self.tool = Tool::Select,
+            Key2 => self.tool = Tool::Circle,
+            Key3 => self.tool = Tool::Slider,
+
             Left => {
                 if let Some(TimingPoint {
                     kind: TimingPointKind::Uninherited(info),

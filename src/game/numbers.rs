@@ -47,7 +47,7 @@ impl Game {
         let height = first_height.unwrap();
         let real_total_width = cs * width as f32 / height as f32;
         let real_height = cs;
-        let left_off = pos[0]-real_total_width;
+        let left_off = pos[0] - real_total_width;
         let real_y = pos[1];
 
         for (_, x, w, digit) in digits {
