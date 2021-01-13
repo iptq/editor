@@ -1,6 +1,6 @@
 use anyhow::Result;
 use ggez::{
-    graphics::{self, Color, DrawParam, Mesh, Rect},
+    graphics::{self, Color, DrawMode, DrawParam, FillOptions, Mesh, Rect},
     mint::Point2,
     Context,
 };
@@ -12,6 +12,14 @@ pub const BOUNDS: Rect = Rect::new(46.0, 732.0, 932.0, 36.0);
 
 impl Game {
     pub(super) fn draw_seeker(&self, ctx: &mut Context) -> Result<()> {
+        let rect = Mesh::new_rectangle(
+            ctx,
+            DrawMode::Fill(FillOptions::default()),
+            Rect::new(0.0, 732.0, 1024.0, 36.0),
+            Color::new(0.0, 0.0, 0.0, 0.7),
+        )?;
+        graphics::draw(ctx, &rect, DrawParam::default())?;
+
         let line_y = BOUNDS.y + BOUNDS.h / 2.0;
         let line = Mesh::new_line(
             ctx,

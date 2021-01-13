@@ -1,6 +1,7 @@
 use std::path::{Path, PathBuf};
 
 use anyhow::Result;
+use ggez::graphics::Rect;
 
 pub fn fuck_you_windows(
     parent: impl AsRef<Path>,
@@ -19,4 +20,8 @@ pub fn fuck_you_windows(
     }
 
     Ok(None)
+}
+
+pub fn rect_contains(rect: &Rect, x: f32, y: f32) -> bool {
+    x >= rect.x && x <= rect.x + rect.w && y >= rect.y && y <= rect.y + rect.h
 }

@@ -14,7 +14,9 @@ use std::str::FromStr;
 use anyhow::Result;
 use ggez::{
     event::{EventHandler, KeyCode, KeyMods, MouseButton},
-    graphics::{self, Color, DrawParam, FilterMode, Image, Rect, Text, WHITE},
+    graphics::{
+        self, Color, DrawMode, DrawParam, FilterMode, Image, Mesh, Rect, StrokeOptions, Text, WHITE,
+    },
     Context, GameError, GameResult,
 };
 use image::io::Reader as ImageReader;
@@ -30,7 +32,7 @@ use crate::audio::{AudioEngine, Sound};
 use crate::beatmap::{BeatmapExt, STACK_DISTANCE};
 use crate::hitobject::HitObjectExt;
 use crate::skin::Skin;
-use crate::utils;
+use crate::utils::{self, rect_contains};
 
 pub const PLAYFIELD_BOUNDS: Rect = Rect::new(112.0, 122.0, 800.0, 600.0);
 pub const DEFAULT_COLORS: &[(f32, f32, f32)] = &[
@@ -42,6 +44,7 @@ pub const DEFAULT_COLORS: &[(f32, f32, f32)] = &[
 
 pub type SliderCache = HashMap<Vec<Point<i32>>, Spline>;
 
+#[derive(Clone, Debug)]
 pub enum Tool {
     Select,
     Circle,
@@ -338,7 +341,7 @@ impl Game {
                     ];
                     self.skin.sliderb.draw_frame(
                         ctx,
-                        (cs_real * 2.0, cs_real * 2.0),
+                        (cs_real * 1.8, cs_real * 1.8),
                         DrawParam::default().dest(ball_pos).color(color),
                         (travel_percent / 0.25) as usize,
                     )?;
@@ -361,9 +364,27 @@ impl Game {
         // draw whatever tool user is using
         let (mx, my) = self.mouse_pos;
         match self.tool {
+            Tool::Select => {
+                let (mx, my) = self.mouse_pos;
+                if let Some((dx, dy)) = self.left_drag_start {
+                    if rect_contains(&PLAYFIELD_BOUNDS, dx, dy) {
+                        let ax = dx.min(mx);
+                        let ay = dy.min(my);
+                        let bx = dx.max(mx);
+                        let by = dy.max(my);
+                        let drag_rect = Rect::new(ax, ay, bx - ax, by - ay);
+                        let drag_rect = Mesh::new_rectangle(
+                            ctx,
+                            DrawMode::Stroke(StrokeOptions::default()),
+                            drag_rect,
+                            WHITE,
+                        )?;
+                        graphics::draw(ctx, &drag_rect, DrawParam::default())?;
+                    }
+                }
+            }
             Tool::Circle => {
-                let b = PLAYFIELD_BOUNDS;
-                if mx > b.x && mx < b.x + b.h && my > b.y && my < b.y + b.h {
+                if rect_contains(&PLAYFIELD_BOUNDS, mx, my) {
                     let pos = [mx, my];
                     let color = Color::new(1.0, 1.0, 1.0, 0.4);
                     self.skin.hitcircle.draw(
@@ -460,6 +481,56 @@ impl Game {
     }
 
     fn handle_click(&mut self, btn: MouseButton, x: f32, y: f32) -> Result<()> {
+        println!("handled click {}", self.song.is_some());
+        if let Some(song) = &self.song {
+            println!("song exists! {:?} {:?}", btn, self.tool);
+            if let (MouseButton::Left, Tool::Select) = (btn, &self.tool) {
+            } else if let (MouseButton::Left, Tool::Circle) = (btn, &self.tool) {
+                println!("left, circle, {:?} {} {}", PLAYFIELD_BOUNDS, x, y);
+                if rect_contains(&PLAYFIELD_BOUNDS, x, y) {
+                    let time = (song.position()? * 1000.0) as i32;
+                    match self
+                        .beatmap
+                        .hit_objects
+                        .binary_search_by_key(&time, |ho| ho.inner.start_time.0)
+                    {
+                        Ok(v) => {
+                            println!("unfortunately already found at idx {}", v);
+                        }
+                        Err(idx) => {
+                            use libosu::{
+                                hitobject::HitObject,
+                                hitsounds::{Additions, SampleInfo},
+                                timing::TimestampMillis,
+                            };
+
+                            let pos_x = (x - PLAYFIELD_BOUNDS.x) / PLAYFIELD_BOUNDS.w * 512.0;
+                            let pos_y = (y - PLAYFIELD_BOUNDS.y) / PLAYFIELD_BOUNDS.h * 384.0;
+                            let inner = HitObject {
+                                start_time: TimestampMillis(time),
+                                pos: Point::new(pos_x as i32, pos_y as i32),
+                                kind: HitObjectKind::Circle,
+                                new_combo: false,
+                                skip_color: 0,
+                                additions: Additions::empty(),
+                                sample_info: SampleInfo::default(),
+                                timing_point: None,
+                            };
+                            let new_obj = HitObjectExt {
+                                inner,
+                                stacking: 0,
+                                color_idx: 0,
+                                number: 0,
+                            };
+                            println!("creating new hitobject: {:?}", new_obj);
+                            self.beatmap.hit_objects.insert(idx, new_obj);
+                            self.beatmap.compute_stacking();
+                            self.beatmap.compute_colors(&self.combo_colors);
+                        }
+                    }
+                }
+            }
+        }
         Ok(())
     }
 }
@@ -477,11 +548,7 @@ impl EventHandler for Game {
         match btn {
             MouseButton::Left => {
                 use self::seeker::BOUNDS;
-                if x > BOUNDS.x
-                    && x < BOUNDS.x + BOUNDS.w
-                    && y > BOUNDS.y
-                    && y < BOUNDS.y + BOUNDS.h
-                {
+                if rect_contains(&BOUNDS, x, y) {
                     let jump_percent = (x - BOUNDS.x) / BOUNDS.w;
                     if let Some(song) = &self.song {
                         let pos = jump_percent as f64 * song.length().unwrap();

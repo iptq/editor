@@ -1,5 +1,6 @@
 use libosu::hitobject::HitObject;
 
+#[derive(Debug)]
 pub struct HitObjectExt {
     pub inner: HitObject,
     pub stacking: usize,
