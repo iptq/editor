@@ -270,6 +270,14 @@ impl Game {
                     .dest([head_x, timeline_y + BOUNDS.h / 2.0])
                     .offset([0.5, 0.0]),
             )?;
+
+            // draw numbers
+            self.draw_numbers_on_circle(
+                ctx,
+                ho.number,
+                [head_x, timeline_y + BOUNDS.h / 2.0],
+                BOUNDS.h / 2.0,
+            )?;
         }
 
         Ok(())

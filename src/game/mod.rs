@@ -1,5 +1,6 @@
 mod background;
 mod grid;
+mod numbers;
 mod seeker;
 mod sliders;
 mod timeline;
@@ -262,7 +263,7 @@ impl Game {
                     &ho.inner,
                     color,
                 )?;
-                slider_info = Some((info, control_points, spline));
+                slider_info = Some((info, control_points));
 
                 let end_pos = ho.inner.end_pos().unwrap();
                 let end_pos = [
@@ -281,6 +282,7 @@ impl Game {
                 )?;
             }
 
+            // draw main hitcircle
             self.skin.hitcircle.draw(
                 ctx,
                 (cs_real * 2.0, cs_real * 2.0),
@@ -292,7 +294,11 @@ impl Game {
                 DrawParam::default().dest(pos),
             )?;
 
-            if let Some((info, control_points, spline)) = slider_info {
+            // draw numbers
+            self.draw_numbers_on_circle(ctx, ho.number, pos, cs_real)?;
+
+            if let Some((info, control_points)) = slider_info {
+                let spline = self.slider_cache.get(&control_points).unwrap();
                 Game::render_slider_wireframe(ctx, &control_points, PLAYFIELD_BOUNDS)?;
 
                 if time > ho_time && time < draw_info.end_time {

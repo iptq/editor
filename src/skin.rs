@@ -1,3 +1,5 @@
+use std::path::{Path, PathBuf};
+
 use anyhow::Result;
 use ggez::{
     graphics::{self, DrawParam, Image},
@@ -5,7 +7,11 @@ use ggez::{
 };
 
 macro_rules! create_skin {
-    ($([$name:ident, $animatable:expr $(,)?]),* $(,)?) => {
+    (
+        // regular skin textures
+        $( [$name:ident, $path:expr, $animatable:expr $(,)?]),*
+        $(,)?
+    ) => {
         pub struct Skin {
             $(
                 pub $name: Texture,
@@ -15,7 +21,7 @@ macro_rules! create_skin {
         impl Skin {
             pub fn new() -> Self {
                 Skin {
-                    $($name: Texture::with_name(stringify!($name), $animatable),)*
+                    $($name: Texture::with_name(stringify!($name), $path, $animatable),)*
                 }
             }
 
@@ -31,28 +37,50 @@ macro_rules! create_skin {
 }
 
 create_skin! {
-    [approachcircle, false],
-    [hitcircle, false],
-    [hitcircleoverlay, false],
-    [reversearrow, false],
-    [sliderb, true],
+    [approachcircle, "approachcircle", false],
+    [hitcircle, "hitcircle", false],
+    [hitcircleoverlay, "hitcircleoverlay", false],
+    [reversearrow, "reversearrow", false],
+    [sliderb, "sliderb", true],
+
+    // TODO: actually read numbers from skin.ini
+    [default0, "default-0", false],
+    [default1, "default-1", false],
+    [default2, "default-2", false],
+    [default3, "default-3", false],
+    [default4, "default-4", false],
+    [default5, "default-5", false],
+    [default6, "default-6", false],
+    [default7, "default-7", false],
+    [default8, "default-8", false],
+    [default9, "default-9", false],
 }
 
 pub struct Texture {
     name: &'static str,
+    path: &'static str,
     image: Option<Image>,
     animatable: bool,
     animation: Vec<Image>,
 }
 
 impl Texture {
-    pub fn with_name(name: &'static str, animatable: bool) -> Self {
+    pub fn with_name(name: &'static str, path: &'static str, animatable: bool) -> Self {
         Texture {
             name,
+            path,
             image: None,
             animatable,
             animation: vec![],
         }
+    }
+
+    pub fn width(&self) -> Option<u16> {
+        self.image.as_ref().map(|image| image.width())
+    }
+
+    pub fn height(&self) -> Option<u16> {
+        self.image.as_ref().map(|image| image.height())
     }
 
     pub fn load(&mut self, ctx: &mut Context) -> Result<()> {
@@ -63,7 +91,7 @@ impl Texture {
 
             self.animation.clear();
             let mut curr = 0;
-            while let Ok(image) = Image::new(ctx, &format!("/{}{}{}.png", self.name, hyphen, curr))
+            while let Ok(image) = Image::new(ctx, &format!("/{}{}{}.png", self.path, hyphen, curr))
             {
                 self.animation.push(image);
                 found = true;
@@ -73,7 +101,7 @@ impl Texture {
         }
 
         if !found {
-            self.image = Some(Image::new(ctx, &format!("/{}.png", self.name))?);
+            self.image = Some(Image::new(ctx, &format!("/{}.png", self.path))?);
         }
 
         Ok(())
