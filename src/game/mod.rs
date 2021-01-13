@@ -12,10 +12,11 @@ use std::str::FromStr;
 
 use anyhow::Result;
 use ggez::{
-    event::{EventHandler, KeyCode, KeyMods},
-    graphics::{self, Color, DrawParam, FilterMode, Rect, Text, WHITE},
+    event::{EventHandler, KeyCode, KeyMods, MouseButton},
+    graphics::{self, Color, DrawParam, FilterMode, Image, Rect, Text, WHITE},
     Context, GameError, GameResult,
 };
+use image::io::Reader as ImageReader;
 use libosu::{
     beatmap::Beatmap,
     hitobject::{HitObjectKind, SpinnerInfo},
@@ -28,6 +29,7 @@ use crate::audio::{AudioEngine, Sound};
 use crate::beatmap::{BeatmapExt, STACK_DISTANCE};
 use crate::hitobject::HitObjectExt;
 use crate::skin::Skin;
+use crate::utils;
 
 pub const PLAYFIELD_BOUNDS: Rect = Rect::new(112.0, 122.0, 800.0, 600.0);
 pub const DEFAULT_COLORS: &[(f32, f32, f32)] = &[
@@ -48,6 +50,7 @@ pub struct Game {
     frame: usize,
     slider_cache: SliderCache,
     combo_colors: Vec<Color>,
+    background_image: Option<Image>,
 
     keymap: HashSet<KeyCode>,
     current_uninherited_timing_point: Option<TimingPoint>,
@@ -74,6 +77,7 @@ impl Game {
                 .iter()
                 .map(|(r, g, b)| Color::new(*r, *g, *b, 1.0))
                 .collect(),
+            background_image: None,
 
             keymap: HashSet::new(),
             current_uninherited_timing_point: None,
@@ -81,7 +85,7 @@ impl Game {
         })
     }
 
-    pub fn load_beatmap(&mut self, path: impl AsRef<Path>) -> Result<()> {
+    pub fn load_beatmap(&mut self, ctx: &mut Context, path: impl AsRef<Path>) -> Result<()> {
         let path = path.as_ref();
 
         let mut file = File::open(&path)?;
@@ -117,6 +121,25 @@ impl Game {
         self.beatmap.compute_colors(&self.combo_colors);
 
         let dir = path.parent().unwrap();
+
+        // TODO: more background images possible?
+        for evt in self.beatmap.inner.events.iter() {
+            use libosu::events::Event;
+            if let Event::Background(evt) = evt {
+                let path = utils::fuck_you_windows(dir, &evt.filename)?;
+                if let Some(path) = path {
+                    let img = ImageReader::open(path)?.decode()?;
+                    let img_buf = img.into_rgba8();
+                    let image = Image::from_rgba8(
+                        ctx,
+                        img_buf.width() as u16,
+                        img_buf.height() as u16,
+                        img_buf.as_raw(),
+                    )?;
+                    self.background_image = Some(image);
+                }
+            }
+        }
 
         let song = Sound::create(dir.join(&self.beatmap.inner.audio_filename))?;
         self.song = Some(song);
@@ -394,6 +417,8 @@ impl EventHandler for Game {
     fn update(&mut self, _ctx: &mut Context) -> GameResult {
         Ok(())
     }
+
+    fn mouse_button_down_event(&mut self, ctx: &mut Context, _: MouseButton, x: f32, y: f32) {}
 
     fn key_up_event(&mut self, _: &mut Context, keycode: KeyCode, _: KeyMods) {
         use KeyCode::*;

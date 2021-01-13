@@ -189,7 +189,10 @@ impl Game {
                             .with_line_width(BOUNDS.h)
                             .with_line_cap(LineCap::Round),
                     ),
-                    &[Point2::from([head_x, body_y]), Point2::from([tail_x, body_y])],
+                    &[
+                        Point2::from([head_x, body_y]),
+                        Point2::from([tail_x, body_y]),
+                    ],
                     color,
                 )?;
                 graphics::draw(ctx, &body, DrawParam::default())?;

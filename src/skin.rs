@@ -92,9 +92,7 @@ impl Texture {
         graphics::draw(
             ctx,
             image,
-            param
-                .scale([x_scale, y_scale])
-                .offset([0.5, 0.5]),
+            param.scale([x_scale, y_scale]).offset([0.5, 0.5]),
         )?;
         Ok(())
     }

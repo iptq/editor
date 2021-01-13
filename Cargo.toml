@@ -22,6 +22,7 @@ stderrlog = "0.5.1"
 num = "0.3.1"
 ordered-float = "2.0.1"
 structopt = "0.3.21"
+image = "0.23.12"
 
 [dependencies.libosu]
 git = "https://github.com/iptq/libosu"

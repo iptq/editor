@@ -830,6 +830,7 @@ dependencies = [
  "anyhow",
  "bass-sys",
  "ggez",
+ "image",
  "libosu",
  "log",
  "num",
@@ -1282,10 +1283,12 @@ dependencies = [
  "byteorder",
  "color_quant",
  "gif",
+ "jpeg-decoder",
  "num-iter",
  "num-rational",
  "num-traits",
  "png",
+ "scoped_threadpool",
  "tiff",
 ]
 
@@ -1364,6 +1367,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "cc797adac5f083b8ff0ca6f6294a999393d76e197c36488e2ef732c4715f6fa3"
 dependencies = [
  "byteorder",
+ "rayon",
 ]
 
 [[package]]
@@ -2504,6 +2508,12 @@ name = "scoped-tls"
 version = "1.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ea6a9290e3c9cf0f18145ef7ffa62d68ee0bf5fcd651017e586dc7fd5da448c2"
+
+[[package]]
+name = "scoped_threadpool"
+version = "0.1.9"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1d51f5df5af43ab3f1360b429fa5e0152ac5ce8c0bd6485cae490332e96846a8"
 
 [[package]]
 name = "scopeguard"

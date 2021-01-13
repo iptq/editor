@@ -12,6 +12,7 @@ mod beatmap;
 mod game;
 mod hitobject;
 mod skin;
+mod utils;
 
 use std::path::PathBuf;
 
@@ -55,7 +56,7 @@ fn main() -> Result<()> {
     game.skin.load_all(&mut ctx)?;
 
     if let Some(path) = opt.path {
-        game.load_beatmap(path)?;
+        game.load_beatmap(&mut ctx, path)?;
     }
 
     if let Some(start_time) = opt.start_time {
