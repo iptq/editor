@@ -1,2 +1,1 @@
-pub struct Game {
-}
+pub struct Game {}

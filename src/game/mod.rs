@@ -44,6 +44,13 @@ pub const DEFAULT_COLORS: &[(f32, f32, f32)] = &[
 
 pub type SliderCache = HashMap<Vec<Point<i32>>, Spline>;
 
+pub struct PartialSliderState {
+    start_time: TimestampMillis,
+    kind: SliderSplineKind,
+    control_points: Vec<Point<i32>>,
+    pixel_length: f64,
+}
+
 #[derive(Clone, Debug)]
 pub enum Tool {
     Select,
@@ -65,7 +72,7 @@ pub struct Game {
     combo_colors: Vec<Color>,
     selected_objects: Vec<usize>,
     tool: Tool,
-    partial_slider_state: Option<(SliderSplineKind, Vec<Point<i32>>)>,
+    partial_slider_state: Option<PartialSliderState>,
 
     keymap: HashSet<KeyCode>,
     mouse_pos: (f32, f32),
@@ -198,7 +205,13 @@ impl Game {
 
         let time = self.song.as_ref().unwrap().position()?;
         let time_millis = TimestampMillis((time * 1000.0) as i32);
-        let text = Text::new(format!("time: {:.4}, mouse: {:?}", time, self.mouse_pos).as_ref());
+        let text = Text::new(
+            format!(
+                "tool: {:?} time: {:.4}, mouse: {:?}",
+                self.tool, time, self.mouse_pos
+            )
+            .as_ref(),
+        );
         graphics::queue_text(ctx, &text, [0.0, 0.0], Some(WHITE));
         graphics::draw_queued_text(ctx, DrawParam::default(), None, FilterMode::Linear)?;
 
@@ -407,34 +420,31 @@ impl Game {
             }
             Tool::Slider => {
                 let color = Color::new(1.0, 1.0, 1.0, 0.4);
-                if let Some((kind, nodes)) = &self.partial_slider_state {
-                    let mut nodes2 = nodes.clone();
-                    let mut kind = *kind;
-                    if let Some(last) = nodes2.last() {
+                if let Some(state) = &mut self.partial_slider_state {
+                    let mut nodes = state.control_points.clone();
+                    let mut kind = state.kind;
+                    if let Some(last) = nodes.last() {
                         if mouse_pos != *last {
-                            nodes2.push(mouse_pos);
-                            if kind == SliderSplineKind::Linear && nodes2.len() == 3 {
-                                kind = SliderSplineKind::Perfect;
-                            } else if kind == SliderSplineKind::Perfect && nodes2.len() == 4 {
-                                kind = SliderSplineKind::Bezier;
-                            }
+                            nodes.push(mouse_pos);
+                            kind = upgrade_slider_type(kind, nodes.len());
                         }
                     }
 
-                    if nodes2.len() > 1 && !(nodes2.len() == 2 && nodes2[0] == nodes2[1]) {
+                    if nodes.len() > 1 && !(nodes.len() == 2 && nodes[0] == nodes[1]) {
                         let slider_velocity =
                             self.beatmap.inner.get_slider_velocity_at_time(time_millis);
                         let slider_multiplier = self.beatmap.inner.difficulty.slider_multiplier;
                         let pixels_per_beat = slider_multiplier * 100.0 * slider_velocity;
                         let pixels_per_tick = pixels_per_beat / 4.0; // TODO: FIX!!!
 
-                        let mut spline = Spline::from_control(kind, &nodes2, None);
+                        let mut spline = Spline::from_control(kind, &nodes, None);
                         let len = spline.pixel_length();
                         debug!("original len: {}", len);
                         let num_ticks = (len / pixels_per_tick).floor();
                         debug!("num ticks: {}", num_ticks);
 
                         let fixed_len = num_ticks * pixels_per_tick;
+                        state.pixel_length = fixed_len;
                         debug!("fixed len: {}", fixed_len);
                         spline.truncate(fixed_len);
 
@@ -449,7 +459,7 @@ impl Game {
                         debug!("done rendering slider body");
                     }
 
-                    Game::render_slider_wireframe(ctx, &nodes2, PLAYFIELD_BOUNDS)?;
+                    Game::render_slider_wireframe(ctx, &nodes, PLAYFIELD_BOUNDS)?;
                     debug!("done rendering slider wireframe");
                 } else {
                     if rect_contains(&PLAYFIELD_BOUNDS, mx, my) {
@@ -556,6 +566,9 @@ impl Game {
 
         if let Some(song) = &self.song {
             println!("song exists! {:?} {:?}", btn, self.tool);
+            let time = song.position()?;
+            let time_millis = TimestampMillis((time * 1000.0) as i32);
+
             if let (MouseButton::Left, Tool::Select) = (btn, &self.tool) {
             } else if let (MouseButton::Left, Tool::Circle) = (btn, &self.tool) {
                 println!("left, circle, {:?} {} {}", PLAYFIELD_BOUNDS, x, y);
@@ -573,7 +586,6 @@ impl Game {
                             use libosu::{
                                 hitobject::HitObject,
                                 hitsounds::{Additions, SampleInfo},
-                                timing::TimestampMillis,
                             };
 
                             let inner = HitObject {
@@ -600,23 +612,84 @@ impl Game {
                     }
                 }
             } else if let (MouseButton::Left, Tool::Slider) = (btn, &self.tool) {
-                if let Some((ref mut kind, ref mut nodes)) = &mut self.partial_slider_state {
+                if let Some(PartialSliderState {
+                    kind,
+                    control_points: ref mut nodes,
+                    ..
+                }) = &mut self.partial_slider_state
+                {
                     nodes.push(pos);
-                    if *kind == SliderSplineKind::Linear && nodes.len() == 3 {
-                        *kind = SliderSplineKind::Perfect;
-                    } else if *kind == SliderSplineKind::Perfect && nodes.len() == 4 {
-                        *kind = SliderSplineKind::Bezier;
-                    }
+                    *kind = upgrade_slider_type(*kind, nodes.len());
                 } else {
-                    self.partial_slider_state = Some((SliderSplineKind::Linear, vec![pos]));
+                    self.partial_slider_state = Some(PartialSliderState {
+                        start_time: time_millis,
+                        kind: SliderSplineKind::Linear,
+                        control_points: vec![pos],
+                        pixel_length: 0.0,
+                    });
                 }
             } else if let (MouseButton::Right, Tool::Slider) = (btn, &self.tool) {
-                if let Some(_) = &mut self.partial_slider_state {
+                if let Some(state) = &mut self.partial_slider_state {
+                    match self
+                        .beatmap
+                        .hit_objects
+                        .binary_search_by_key(&state.start_time.0, |ho| ho.inner.start_time.0)
+                    {
+                        Ok(v) => {
+                            println!("unfortunately already found at idx {}", v);
+                        }
+                        Err(idx) => {
+                            use libosu::{
+                                hitobject::{HitObject, SliderInfo},
+                                hitsounds::{Additions, SampleInfo},
+                            };
+
+                            state.control_points.push(pos);
+                            let after_len = state.control_points.len();
+                            let first = state.control_points.remove(0);
+                            let inner = HitObject {
+                                start_time: state.start_time,
+                                pos: first,
+                                kind: HitObjectKind::Slider(SliderInfo {
+                                    kind: upgrade_slider_type(state.kind, after_len),
+                                    control_points: state.control_points.clone(),
+                                    num_repeats: 1,
+                                    pixel_length: state.pixel_length,
+                                    edge_additions: vec![],
+                                    edge_samplesets: vec![],
+                                }),
+                                new_combo: false,
+                                skip_color: 0,
+                                additions: Additions::empty(),
+                                sample_info: SampleInfo::default(),
+                            };
+
+                            let new_obj = HitObjectExt {
+                                inner,
+                                stacking: 0,
+                                color_idx: 0,
+                                number: 0,
+                            };
+                            println!("creating new hitobject: {:?}", new_obj);
+                            self.beatmap.hit_objects.insert(idx, new_obj);
+                            self.beatmap.compute_stacking();
+                            self.beatmap.compute_colors(&self.combo_colors);
+                        }
+                    }
                     self.partial_slider_state = None;
                 }
             }
         }
         Ok(())
+    }
+
+    fn switch_tool_to(&mut self, target: Tool) {
+        // clear slider state if we're switching away from slider
+        if matches!(self.tool, Tool::Slider) && !matches!(target, Tool::Slider) {
+            self.partial_slider_state = None;
+        }
+
+        self.tool = target;
     }
 }
 
@@ -685,9 +758,9 @@ impl EventHandler for Game {
         use KeyCode::*;
         self.keymap.insert(keycode);
         match keycode {
-            Key1 => self.tool = Tool::Select,
-            Key2 => self.tool = Tool::Circle,
-            Key3 => self.tool = Tool::Slider,
+            Key1 => self.switch_tool_to(Tool::Select),
+            Key2 => self.switch_tool_to(Tool::Circle),
+            Key3 => self.switch_tool_to(Tool::Slider),
 
             Left => {
                 if let Some(TimingPoint {
@@ -726,5 +799,13 @@ impl EventHandler for Game {
             return Err(GameError::RenderError(err.to_string()));
         };
         Ok(())
+    }
+}
+
+fn upgrade_slider_type(initial_type: SliderSplineKind, after_len: usize) -> SliderSplineKind {
+    match (initial_type, after_len) {
+        (SliderSplineKind::Linear, 3) => SliderSplineKind::Perfect,
+        (SliderSplineKind::Perfect, 4) => SliderSplineKind::Bezier,
+        _ => initial_type,
     }
 }
