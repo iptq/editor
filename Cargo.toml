@@ -26,7 +26,7 @@ image = "0.23.12"
 
 [dependencies.libosu]
 git = "https://github.com/iptq/libosu"
-rev = "df7ffa4b51328479addde0804930ec76112b3b69"
+rev = "0229c52759ffb70322384e53abb0112cb52e49ae"
 
 [features]
 clippy = []

@@ -161,6 +161,7 @@ impl BeatmapExt {
                                     .distance(self.hit_objects[j].inner.pos.to_float().unwrap())
                                     < STACK_DISTANCE
                                 {
+                                    println!("stacking:{} offset:{}", self.hit_objects[j].stacking, offset);
                                     self.hit_objects[j].stacking -= offset;
                                 }
                             }

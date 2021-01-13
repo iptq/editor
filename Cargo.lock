@@ -1455,7 +1455,7 @@ dependencies = [
 [[package]]
 name = "libosu"
 version = "0.0.16"
-source = "git+https://github.com/iptq/libosu?rev=df7ffa4b51328479addde0804930ec76112b3b69#df7ffa4b51328479addde0804930ec76112b3b69"
+source = "git+https://github.com/iptq/libosu?rev=0229c52759ffb70322384e53abb0112cb52e49ae#0229c52759ffb70322384e53abb0112cb52e49ae"
 dependencies = [
  "bitflags",
  "derive_more",
