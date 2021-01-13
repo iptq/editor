@@ -1,7 +1,6 @@
 use anyhow::Result;
 use ggez::{
     graphics::{self, DrawParam, Image},
-    nalgebra::Point2,
     Context,
 };
 
@@ -95,7 +94,7 @@ impl Texture {
             image,
             param
                 .scale([x_scale, y_scale])
-                .offset(Point2::new(0.5, 0.5)),
+                .offset([0.5, 0.5]),
         )?;
         Ok(())
     }

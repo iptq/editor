@@ -1,7 +1,7 @@
 use anyhow::Result;
 use ggez::{
     graphics::{self, Color, DrawMode, DrawParam, LineCap, Mesh, Rect, StrokeOptions, WHITE},
-    nalgebra::Point2,
+    mint::Point2,
     Context,
 };
 use libosu::{
@@ -36,8 +36,8 @@ impl Game {
         let current_line = Mesh::new_line(
             ctx,
             &[
-                Point2::new(timeline_current_line_x, BOUNDS.y),
-                Point2::new(timeline_current_line_x, BOUNDS.y + BOUNDS.h),
+                Point2::from([timeline_current_line_x, BOUNDS.y]),
+                Point2::from([timeline_current_line_x, BOUNDS.y + BOUNDS.h]),
             ],
             2.0,
             graphics::WHITE,
@@ -115,7 +115,7 @@ impl Game {
                             let y1 = y2 - BOUNDS.h * 0.3 * height;
                             let tick = Mesh::new_line(
                                 ctx,
-                                &[Point2::new(x, y1), Point2::new(x, y2)],
+                                &[Point2::from([x, y1]), Point2::from([x, y2])],
                                 1.0,
                                 *color,
                             )?;
@@ -135,8 +135,8 @@ impl Game {
         let bottom_line = Mesh::new_line(
             ctx,
             &[
-                Point2::new(BOUNDS.x, BOUNDS.y + BOUNDS.h),
-                Point2::new(BOUNDS.x + BOUNDS.w, BOUNDS.y + BOUNDS.h),
+                Point2::from([BOUNDS.x, BOUNDS.y + BOUNDS.h]),
+                Point2::from([BOUNDS.x + BOUNDS.w, BOUNDS.y + BOUNDS.h]),
             ],
             2.0,
             graphics::WHITE,
@@ -189,7 +189,7 @@ impl Game {
                             .with_line_width(BOUNDS.h)
                             .with_line_cap(LineCap::Round),
                     ),
-                    &[Point2::new(head_x, body_y), Point2::new(tail_x, body_y)],
+                    &[Point2::from([head_x, body_y]), Point2::from([tail_x, body_y])],
                     color,
                 )?;
                 graphics::draw(ctx, &body, DrawParam::default())?;

@@ -16,7 +16,7 @@ members = [
 [dependencies]
 anyhow = "1.0.38"
 bass-sys = { path = "bass-sys" }
-ggez = "0.5.1"
+ggez = { git = "https://github.com/ggez/ggez", branch = "devel" }
 log = "0.4.13"
 stderrlog = "0.5.1"
 num = "0.3.1"

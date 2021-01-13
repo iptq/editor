@@ -4,7 +4,7 @@ use ggez::{
         self, Canvas, Color, DrawMode, DrawParam, FillOptions, LineCap, LineJoin, Mesh, Rect,
         StrokeOptions,
     },
-    nalgebra::Point2,
+    mint::Point2,
     Context,
 };
 use libosu::{

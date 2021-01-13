@@ -1,3 +1,4 @@
+mod background;
 mod grid;
 mod seeker;
 mod sliders;
@@ -146,6 +147,7 @@ impl Game {
 
         graphics::clear(ctx, [0.0, 0.0, 0.0, 1.0].into());
 
+        self.draw_background(ctx)?;
         self.draw_grid(ctx)?;
 
         let time = self.song.as_ref().unwrap().position()?;

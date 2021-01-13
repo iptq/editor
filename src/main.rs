@@ -62,7 +62,5 @@ fn main() -> Result<()> {
         game.jump_to_time(start_time)?;
     }
 
-    event::run(&mut ctx, &mut event_loop, &mut game)?;
-
-    Ok(())
+    event::run(ctx, event_loop, game)
 }

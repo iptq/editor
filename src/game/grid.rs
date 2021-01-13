@@ -1,7 +1,7 @@
 use anyhow::Result;
 use ggez::{
     graphics::{self, Color, DrawMode, DrawParam, Mesh, StrokeOptions},
-    nalgebra::Point2,
+    mint::Point2,
     Context,
 };
 
@@ -35,7 +35,7 @@ impl Game {
             let x = BOUNDS.x + x as f32 * BOUNDS.w / 512.0;
             let line = Mesh::new_line(
                 ctx,
-                &[Point2::new(x, min_y), Point2::new(x, max_y)],
+                &[Point2::from([x, min_y]), Point2::from([x, max_y])],
                 weight,
                 color,
             )?;
@@ -50,7 +50,7 @@ impl Game {
             let y = BOUNDS.y + y as f32 * BOUNDS.h / 384.0;
             let line = Mesh::new_line(
                 ctx,
-                &[Point2::new(min_x, y), Point2::new(max_x, y)],
+                &[Point2::from([min_x, y]), Point2::from([max_x, y])],
                 weight,
                 color,
             )?;

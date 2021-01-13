@@ -1,7 +1,7 @@
 use anyhow::Result;
 use ggez::{
     graphics::{self, Color, DrawParam, Mesh, Rect},
-    nalgebra::Point2,
+    mint::Point2,
     Context,
 };
 use libosu::timing::TimingPointKind;
@@ -16,8 +16,8 @@ impl Game {
         let line = Mesh::new_line(
             ctx,
             &[
-                Point2::new(BOUNDS.x, line_y),
-                Point2::new(BOUNDS.x + BOUNDS.w, line_y),
+                Point2::from([BOUNDS.x, line_y]),
+                Point2::from([BOUNDS.x + BOUNDS.w, line_y]),
             ],
             1.0,
             graphics::WHITE,
@@ -39,8 +39,8 @@ impl Game {
                 let line = Mesh::new_line(
                     ctx,
                     &[
-                        Point2::new(x, BOUNDS.y),
-                        Point2::new(x, BOUNDS.y + BOUNDS.h),
+                        Point2::from([x, BOUNDS.y]),
+                        Point2::from([x, BOUNDS.y + BOUNDS.h]),
                     ],
                     1.0,
                     color,
@@ -53,8 +53,8 @@ impl Game {
             let line = Mesh::new_line(
                 ctx,
                 &[
-                    Point2::new(x, BOUNDS.y + 0.2 * BOUNDS.h),
-                    Point2::new(x, BOUNDS.y + 0.8 * BOUNDS.h),
+                    Point2::from([x, BOUNDS.y + 0.2 * BOUNDS.h]),
+                    Point2::from([x, BOUNDS.y + 0.8 * BOUNDS.h]),
                 ],
                 4.0,
                 graphics::WHITE,
