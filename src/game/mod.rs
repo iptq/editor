@@ -7,6 +7,7 @@ use std::collections::{HashMap, HashSet};
 use std::fs::File;
 use std::io::Read;
 use std::path::Path;
+use std::str::FromStr;
 
 use anyhow::Result;
 use ggez::{
@@ -86,7 +87,7 @@ impl Game {
         let mut contents = String::new();
         file.read_to_string(&mut contents)?;
 
-        let beatmap = Beatmap::from_osz(&contents)?;
+        let beatmap = Beatmap::from_str(&contents)?;
         self.beatmap = BeatmapExt::new(beatmap);
         self.beatmap.compute_stacking();
 
@@ -214,8 +215,8 @@ impl Game {
             let ho_time = (ho.inner.start_time.0 as f64) / 1000.0;
             let stacking = ho.stacking as f32 * STACK_DISTANCE as f32;
             let pos = [
-                PLAYFIELD_BOUNDS.x + osupx_scale_x * (ho.inner.pos.0 as f32 - stacking),
-                PLAYFIELD_BOUNDS.y + osupx_scale_y * (ho.inner.pos.1 as f32 - stacking),
+                PLAYFIELD_BOUNDS.x + osupx_scale_x * (ho.inner.pos.x as f32 - stacking),
+                PLAYFIELD_BOUNDS.y + osupx_scale_y * (ho.inner.pos.y as f32 - stacking),
             ];
             let color = draw_info.color;
 
@@ -240,8 +241,8 @@ impl Game {
 
                 let end_pos = ho.inner.end_pos().unwrap();
                 let end_pos = [
-                    PLAYFIELD_BOUNDS.x + osupx_scale_x * end_pos.0 as f32,
-                    PLAYFIELD_BOUNDS.y + osupx_scale_y * end_pos.1 as f32,
+                    PLAYFIELD_BOUNDS.x + osupx_scale_x * end_pos.x as f32,
+                    PLAYFIELD_BOUNDS.y + osupx_scale_y * end_pos.y as f32,
                 ];
                 self.skin.hitcircle.draw(
                     ctx,
@@ -283,8 +284,8 @@ impl Game {
                     let travel_length = travel_percent * info.pixel_length;
                     let pos = spline.point_at_length(travel_length);
                     let ball_pos = [
-                        PLAYFIELD_BOUNDS.x + osupx_scale_x * pos.0 as f32,
-                        PLAYFIELD_BOUNDS.y + osupx_scale_y * pos.1 as f32,
+                        PLAYFIELD_BOUNDS.x + osupx_scale_x * pos.x as f32,
+                        PLAYFIELD_BOUNDS.y + osupx_scale_y * pos.y as f32,
                     ];
                     self.skin.sliderb.draw_frame(
                         ctx,
@@ -322,7 +323,7 @@ impl Game {
             let pos = song.position()?;
 
             if let Some(timing_point) = self.beatmap.inner.timing_points.first() {
-                if pos < timing_point.time.as_seconds() {
+                if pos < timing_point.time.as_seconds().0.into_inner() {
                     if let TimingPointKind::Uninherited(_) = &timing_point.kind {
                         self.current_uninherited_timing_point = Some(timing_point.clone());
                     }
@@ -332,7 +333,7 @@ impl Game {
             let mut found_uninherited = false;
             let mut found_inherited = false;
             for timing_point in self.beatmap.inner.timing_points.iter() {
-                if pos < timing_point.time.as_seconds() {
+                if pos < timing_point.time.as_seconds().0.into_inner() {
                     continue;
                 }
 
@@ -366,7 +367,7 @@ impl Game {
                 ..
             }) = &self.current_uninherited_timing_point
             {
-                let diff = pos - time.as_seconds();
+                let diff = pos - time.as_seconds().0.into_inner();
                 let tick = info.mpb / 1000.0 / info.meter as f64;
                 let beats = (diff / tick).round();
                 let frac = diff - beats * tick;

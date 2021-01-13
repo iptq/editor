@@ -33,7 +33,7 @@ impl Game {
                     TimingPointKind::Uninherited(_) => Color::new(0.8, 0.0, 0.0, 0.5),
                 };
 
-                let percent = timing_point.time.as_seconds() / len;
+                let percent = timing_point.time.as_seconds().0.into_inner() / len;
                 let x = BOUNDS.x + percent as f32 * BOUNDS.w;
 
                 let line = Mesh::new_line(

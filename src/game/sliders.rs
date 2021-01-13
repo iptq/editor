@@ -47,9 +47,8 @@ impl Game {
             .spline_points
             .iter()
             .map(|point| {
-                let (x, y) = (point.0, point.1);
-                let x2 = rect.x as f64 + osupx_scale_x * x;
-                let y2 = rect.y as f64 + osupx_scale_y * y;
+                let x2 = rect.x as f64 + osupx_scale_x * point.x;
+                let y2 = rect.y as f64 + osupx_scale_y * point.y;
                 boundx = boundx.min(x2 - cs_osupx);
                 boundy = boundy.min(y2 - cs_osupx);
                 boundw = boundw.max(x2 + cs_osupx - boundx);
@@ -104,16 +103,15 @@ impl Game {
         control_points: &[Point<i32>],
         rect: Rect,
     ) -> Result<()> {
-        let osupx_scale_x = rect.w as f64 / 512.0;
-        let osupx_scale_y = rect.h as f64 / 384.0;
+        let osupx_scale_x = rect.w as f32 / 512.0;
+        let osupx_scale_y = rect.h as f32 / 384.0;
 
         let points_mapped = control_points
             .iter()
             .map(|point| {
-                let (x, y) = (point.0 as f64, point.1 as f64);
-                let x2 = rect.x as f64 + osupx_scale_x * x;
-                let y2 = rect.y as f64 + osupx_scale_y * y;
-                [x2 as f32, y2 as f32].into()
+                let x2 = rect.x as f32 + osupx_scale_x * point.x as f32;
+                let y2 = rect.y as f32 + osupx_scale_y * point.y as f32;
+                [x2, y2].into()
             })
             .collect::<Vec<Point2<_>>>();
 

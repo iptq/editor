@@ -14,18 +14,18 @@ members = [
 ]
 
 [dependencies]
-anyhow = "1.0.37"
+anyhow = "1.0.38"
 bass-sys = { path = "bass-sys" }
 ggez = "0.5.1"
-log = "0.4.11"
-stderrlog = "0.5.0"
+log = "0.4.13"
+stderrlog = "0.5.1"
 num = "0.3.1"
 ordered-float = "2.0.1"
 structopt = "0.3.21"
 
 [dependencies.libosu]
 git = "https://github.com/iptq/libosu"
-rev = "557d0a321405516f12c3939c1207c7341f796f35"
+rev = "df7ffa4b51328479addde0804930ec76112b3b69"
 
 [features]
 clippy = []

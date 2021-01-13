@@ -4,7 +4,10 @@ use ggez::{
     nalgebra::Point2,
     Context,
 };
-use libosu::{hitobject::HitObjectKind, timing::TimingPointKind};
+use libosu::{
+    hitobject::HitObjectKind,
+    timing::{Duration, TimestampSec, TimingPointKind},
+};
 
 use crate::hitobject::HitObjectExt;
 
@@ -56,13 +59,13 @@ impl Game {
                 &uninherited_timing_points[i],
                 uninherited_timing_points.get(i + 1),
             );
-            let fst_time = fst.time.as_seconds();
+            let fst_time = fst.time.as_seconds().0.into_inner();
             if let TimingPointKind::Uninherited(info) = &fst.kind {
                 last_uninherited = Some(info);
             }
 
             let snd_time = if let Some(snd) = snd {
-                let snd_time = snd.time.as_seconds();
+                let snd_time = snd.time.as_seconds().0.into_inner();
                 if snd_time >= timeline_left && snd_time <= timeline_right {
                     Some(snd_time)
                 } else {
@@ -85,7 +88,7 @@ impl Game {
                     let beat = last_uninherited.mpb / 1000.0;
                     let ticks = TICKS[last_uninherited.meter as usize];
 
-                    let mut time = fst.time.as_seconds();
+                    let mut time = fst.time.as_seconds().0.into_inner();
                     let passed_measures = ((timeline_left - time) / beat).floor();
                     time += passed_measures * beat;
 
@@ -158,7 +161,9 @@ impl Game {
             .beatmap
             .inner
             .get_hitobject_end_time(&ho.inner)
-            .as_seconds();
+            .as_seconds()
+            .0
+            .into_inner();
 
         let color = self.combo_colors[ho.color_idx];
 
