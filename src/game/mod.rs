@@ -22,10 +22,10 @@ use ggez::{
 use image::io::Reader as ImageReader;
 use libosu::{
     beatmap::Beatmap,
-    hitobject::{HitObjectKind, SpinnerInfo},
+    hitobject::{HitObjectKind, SliderSplineKind, SpinnerInfo},
     math::Point,
     spline::Spline,
-    timing::{TimingPoint, TimingPointKind},
+    timing::{TimestampMillis, TimingPoint, TimingPointKind},
 };
 
 use crate::audio::{AudioEngine, Sound};
@@ -65,6 +65,7 @@ pub struct Game {
     combo_colors: Vec<Color>,
     selected_objects: Vec<usize>,
     tool: Tool,
+    partial_slider_state: Option<(SliderSplineKind, Vec<Point<i32>>)>,
 
     keymap: HashSet<KeyCode>,
     mouse_pos: (f32, f32),
@@ -101,6 +102,7 @@ impl Game {
             left_drag_start: None,
             right_drag_start: None,
             tool: Tool::Select,
+            partial_slider_state: None,
             current_uninherited_timing_point: None,
             current_inherited_timing_point: None,
         })
@@ -195,6 +197,7 @@ impl Game {
         self.draw_grid(ctx)?;
 
         let time = self.song.as_ref().unwrap().position()?;
+        let time_millis = TimestampMillis((time * 1000.0) as i32);
         let text = Text::new(format!("time: {:.4}, mouse: {:?}", time, self.mouse_pos).as_ref());
         graphics::queue_text(ctx, &text, [0.0, 0.0], Some(WHITE));
         graphics::draw_queued_text(ctx, DrawParam::default(), None, FilterMode::Linear)?;
@@ -238,7 +241,8 @@ impl Game {
                     end_time: spinner_end,
                 }) => end_time = (spinner_end.0 as f64) / 1000.0,
             };
-            if ho_time - preempt < time && time < end_time {
+
+            if ho_time - preempt <= time && time <= end_time {
                 playfield_hitobjects.push(DrawInfo {
                     hit_object: ho,
                     opacity,
@@ -273,19 +277,18 @@ impl Game {
 
                 let mut color = color;
                 color.a = 0.6 * draw_info.opacity as f32;
-                let spline = Game::render_slider(
+                Game::render_slider_body(
                     &mut self.slider_cache,
                     info,
                     control_points.as_ref(),
                     ctx,
                     PLAYFIELD_BOUNDS,
                     &self.beatmap.inner,
-                    &ho.inner,
                     color,
                 )?;
                 slider_info = Some((info, control_points));
 
-                let end_pos = ho.inner.end_pos().unwrap();
+                let end_pos = ho.inner.end_pos();
                 let end_pos = [
                     PLAYFIELD_BOUNDS.x + osupx_scale_x * end_pos.x as f32,
                     PLAYFIELD_BOUNDS.y + osupx_scale_y * end_pos.y as f32,
@@ -363,6 +366,9 @@ impl Game {
 
         // draw whatever tool user is using
         let (mx, my) = self.mouse_pos;
+        let pos_x = (mx - PLAYFIELD_BOUNDS.x) / PLAYFIELD_BOUNDS.w * 512.0;
+        let pos_y = (my - PLAYFIELD_BOUNDS.y) / PLAYFIELD_BOUNDS.h * 384.0;
+        let mouse_pos = Point::new(pos_x as i32, pos_y as i32);
         match self.tool {
             Tool::Select => {
                 let (mx, my) = self.mouse_pos;
@@ -397,6 +403,68 @@ impl Game {
                         (cs_real * 2.0, cs_real * 2.0),
                         DrawParam::default().dest(pos).color(color),
                     )?;
+                }
+            }
+            Tool::Slider => {
+                let color = Color::new(1.0, 1.0, 1.0, 0.4);
+                if let Some((kind, nodes)) = &self.partial_slider_state {
+                    let mut nodes2 = nodes.clone();
+                    let mut kind = *kind;
+                    if let Some(last) = nodes2.last() {
+                        if mouse_pos != *last {
+                            nodes2.push(mouse_pos);
+                            if kind == SliderSplineKind::Linear && nodes2.len() == 3 {
+                                kind = SliderSplineKind::Perfect;
+                            } else if kind == SliderSplineKind::Perfect && nodes2.len() == 4 {
+                                kind = SliderSplineKind::Bezier;
+                            }
+                        }
+                    }
+
+                    if nodes2.len() > 1 && !(nodes2.len() == 2 && nodes2[0] == nodes2[1]) {
+                        let slider_velocity =
+                            self.beatmap.inner.get_slider_velocity_at_time(time_millis);
+                        let slider_multiplier = self.beatmap.inner.difficulty.slider_multiplier;
+                        let pixels_per_beat = slider_multiplier * 100.0 * slider_velocity;
+                        let pixels_per_tick = pixels_per_beat / 4.0; // TODO: FIX!!!
+
+                        let mut spline = Spline::from_control(kind, &nodes2, None);
+                        let len = spline.pixel_length();
+                        debug!("original len: {}", len);
+                        let num_ticks = (len / pixels_per_tick).floor();
+                        debug!("num ticks: {}", num_ticks);
+
+                        let fixed_len = num_ticks * pixels_per_tick;
+                        debug!("fixed len: {}", fixed_len);
+                        spline.truncate(fixed_len);
+
+                        debug!("len: {}", spline.pixel_length());
+                        Game::render_spline(
+                            ctx,
+                            &self.beatmap.inner,
+                            &spline,
+                            PLAYFIELD_BOUNDS,
+                            color,
+                        )?;
+                        debug!("done rendering slider body");
+                    }
+
+                    Game::render_slider_wireframe(ctx, &nodes2, PLAYFIELD_BOUNDS)?;
+                    debug!("done rendering slider wireframe");
+                } else {
+                    if rect_contains(&PLAYFIELD_BOUNDS, mx, my) {
+                        let pos = [mx, my];
+                        self.skin.hitcircle.draw(
+                            ctx,
+                            (cs_real * 2.0, cs_real * 2.0),
+                            DrawParam::default().dest(pos).color(color),
+                        )?;
+                        self.skin.hitcircleoverlay.draw(
+                            ctx,
+                            (cs_real * 2.0, cs_real * 2.0),
+                            DrawParam::default().dest(pos).color(color),
+                        )?;
+                    }
                 }
             }
             _ => {}
@@ -482,6 +550,10 @@ impl Game {
 
     fn handle_click(&mut self, btn: MouseButton, x: f32, y: f32) -> Result<()> {
         println!("handled click {}", self.song.is_some());
+        let pos_x = (x - PLAYFIELD_BOUNDS.x) / PLAYFIELD_BOUNDS.w * 512.0;
+        let pos_y = (y - PLAYFIELD_BOUNDS.y) / PLAYFIELD_BOUNDS.h * 384.0;
+        let pos = Point::new(pos_x as i32, pos_y as i32);
+
         if let Some(song) = &self.song {
             println!("song exists! {:?} {:?}", btn, self.tool);
             if let (MouseButton::Left, Tool::Select) = (btn, &self.tool) {
@@ -504,18 +576,16 @@ impl Game {
                                 timing::TimestampMillis,
                             };
 
-                            let pos_x = (x - PLAYFIELD_BOUNDS.x) / PLAYFIELD_BOUNDS.w * 512.0;
-                            let pos_y = (y - PLAYFIELD_BOUNDS.y) / PLAYFIELD_BOUNDS.h * 384.0;
                             let inner = HitObject {
                                 start_time: TimestampMillis(time),
-                                pos: Point::new(pos_x as i32, pos_y as i32),
+                                pos,
                                 kind: HitObjectKind::Circle,
                                 new_combo: false,
                                 skip_color: 0,
                                 additions: Additions::empty(),
                                 sample_info: SampleInfo::default(),
-                                timing_point: None,
                             };
+
                             let new_obj = HitObjectExt {
                                 inner,
                                 stacking: 0,
@@ -528,6 +598,21 @@ impl Game {
                             self.beatmap.compute_colors(&self.combo_colors);
                         }
                     }
+                }
+            } else if let (MouseButton::Left, Tool::Slider) = (btn, &self.tool) {
+                if let Some((ref mut kind, ref mut nodes)) = &mut self.partial_slider_state {
+                    nodes.push(pos);
+                    if *kind == SliderSplineKind::Linear && nodes.len() == 3 {
+                        *kind = SliderSplineKind::Perfect;
+                    } else if *kind == SliderSplineKind::Perfect && nodes.len() == 4 {
+                        *kind = SliderSplineKind::Bezier;
+                    }
+                } else {
+                    self.partial_slider_state = Some((SliderSplineKind::Linear, vec![pos]));
+                }
+            } else if let (MouseButton::Right, Tool::Slider) = (btn, &self.tool) {
+                if let Some(_) = &mut self.partial_slider_state {
+                    self.partial_slider_state = None;
                 }
             }
         }

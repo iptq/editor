@@ -75,11 +75,7 @@ impl BeatmapExt {
                     let object_n_pos: Point<f64> = object_n.inner.pos.to_float().unwrap();
                     if stack_base_pos.distance(object_n_pos) < STACK_DISTANCE
                         || (stack_base_obj.inner.kind.is_slider()
-                            && stack_base_obj
-                                .inner
-                                .end_pos()
-                                .unwrap()
-                                .distance(object_n_pos)
+                            && stack_base_obj.inner.end_pos().distance(object_n_pos)
                                 < STACK_DISTANCE)
                     {
                         stack_base_idx = n;
@@ -146,7 +142,6 @@ impl BeatmapExt {
                             && self.hit_objects[n]
                                 .inner
                                 .end_pos()
-                                .unwrap()
                                 .distance(self.hit_objects[iidx].inner.pos.to_float().unwrap())
                                 < STACK_DISTANCE
                         {
@@ -157,7 +152,6 @@ impl BeatmapExt {
                                 if self.hit_objects[n]
                                     .inner
                                     .end_pos()
-                                    .unwrap()
                                     .distance(self.hit_objects[j].inner.pos.to_float().unwrap())
                                     < STACK_DISTANCE
                                 {
@@ -202,7 +196,6 @@ impl BeatmapExt {
                         if self.hit_objects[n]
                             .inner
                             .end_pos()
-                            .unwrap()
                             .distance(self.hit_objects[iidx].inner.pos.to_float().unwrap())
                             < STACK_DISTANCE
                         {

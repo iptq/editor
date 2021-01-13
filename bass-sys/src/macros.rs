@@ -16,9 +16,9 @@ macro_rules! extern_log {
             }
             #[allow(non_snake_case)]
             $vis unsafe fn $name ($($arg: $argty,)*) $(-> $ty)? {
-                log::debug!("entering {} ({:?})", stringify!($name), ($($arg,)*));
+                log::trace!("entering {} ({:?})", stringify!($name), ($($arg,)*));
                 let result = paste::expr! { self::[< __inner_ffi_ $name >]::$name($($arg,)*) };
-                log::debug!("exiting {} => {:?}", stringify!($name), result);
+                log::trace!("exiting {} => {:?}", stringify!($name), result);
                 result
             }
          )*

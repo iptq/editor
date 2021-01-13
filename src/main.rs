@@ -41,8 +41,9 @@ fn main() -> Result<()> {
     let opt = Opt::from_args();
     stderrlog::new()
         .module("editor")
-        .module("bass_sys")
+        .module("libosu::spline")
         .verbosity(opt.verbose)
+        .show_module_names(true)
         .init()
         .unwrap();
 

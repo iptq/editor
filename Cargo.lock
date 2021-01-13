@@ -1455,11 +1455,12 @@ dependencies = [
 [[package]]
 name = "libosu"
 version = "0.0.16"
-source = "git+https://github.com/iptq/libosu?rev=0229c52759ffb70322384e53abb0112cb52e49ae#0229c52759ffb70322384e53abb0112cb52e49ae"
+source = "git+https://github.com/iptq/libosu?rev=81677d5ed88936c4a3e64af951ff0ae523c2d403#81677d5ed88936c4a3e64af951ff0ae523c2d403"
 dependencies = [
  "bitflags",
  "derive_more",
  "lazy_static",
+ "log",
  "num",
  "num-derive",
  "num-rational",

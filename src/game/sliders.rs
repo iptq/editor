@@ -17,25 +17,13 @@ use libosu::{
 use super::{Game, SliderCache};
 
 impl Game {
-    pub fn render_slider<'a>(
-        slider_cache: &'a mut SliderCache,
-        slider_info: &SliderInfo,
-        control_points: &[Point<i32>],
+    pub fn render_spline(
         ctx: &mut Context,
-        rect: Rect,
         beatmap: &Beatmap,
-        slider: &HitObject,
+        spline: &Spline,
+        rect: Rect,
         color: Color,
-    ) -> Result<&'a Spline> {
-        let spline = if slider_cache.contains_key(control_points) {
-            slider_cache.get(control_points).unwrap()
-        } else {
-            let new_spline =
-                Spline::from_control(slider_info.kind, control_points, slider_info.pixel_length);
-            slider_cache.insert(control_points.to_vec(), new_spline);
-            slider_cache.get(control_points).unwrap()
-        };
-
+    ) -> Result<()> {
         let cs_scale = rect.w / 640.0;
         let osupx_scale_x = rect.w as f64 / 512.0;
         let osupx_scale_y = rect.h as f64 / 384.0;
@@ -95,7 +83,52 @@ impl Game {
         graphics::set_canvas(ctx, None);
         graphics::draw(ctx, &canvas, DrawParam::default().color(color))?;
 
-        Ok(spline)
+        Ok(())
+    }
+
+    pub fn render_slider_body<'a>(
+        slider_cache: &'a mut SliderCache,
+        slider_info: &SliderInfo,
+        control_points: &[Point<i32>],
+        ctx: &mut Context,
+        rect: Rect,
+        beatmap: &Beatmap,
+        color: Color,
+    ) -> Result<()> {
+        debug!(
+            "Rendering slider body with control points {:?}",
+            control_points
+        );
+
+        if control_points.len() < 2
+            || (control_points.len() == 2 && control_points[0] == control_points[1])
+        {
+            debug!("Slider too short, not rendering!");
+            return Ok(());
+        }
+
+        let spline = if slider_cache.contains_key(control_points) {
+            slider_cache.get(control_points).expect("just checked")
+        } else {
+            let new_spline = Spline::from_control(
+                slider_info.kind,
+                control_points,
+                Some(slider_info.pixel_length),
+            );
+            slider_cache.insert(control_points.to_vec(), new_spline);
+            slider_cache.get(control_points).expect("just inserted it")
+        };
+        debug!("spline length: {}", spline.spline_points.len());
+
+        if spline.spline_points.len() < 2
+            || (spline.spline_points.len() == 2
+                && spline.spline_points[0] == spline.spline_points[1])
+        {
+            debug!("Slider too short, not rendering!");
+            return Ok(());
+        }
+
+        Game::render_spline(ctx, beatmap, spline, rect, color)
     }
 
     pub fn render_slider_wireframe(
@@ -116,13 +149,17 @@ impl Game {
             .collect::<Vec<Point2<_>>>();
 
         // draw control points wireframe
-        let frame = Mesh::new_polyline(
-            ctx,
-            DrawMode::Stroke(StrokeOptions::default()),
-            &points_mapped,
-            graphics::WHITE,
-        )?;
-        graphics::draw(ctx, &frame, DrawParam::default())?;
+        if control_points.len() > 1
+            && !(control_points.len() == 2 && control_points[0] == control_points[1])
+        {
+            let frame = Mesh::new_polyline(
+                ctx,
+                DrawMode::Stroke(StrokeOptions::default()),
+                &points_mapped,
+                graphics::WHITE,
+            )?;
+            graphics::draw(ctx, &frame, DrawParam::default())?;
+        }
 
         // draw points on wireframe
         let mut i = 0;
