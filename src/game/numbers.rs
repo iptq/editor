@@ -1,8 +1,5 @@
 use anyhow::Result;
-use ggez::{
-    graphics::{self, DrawParam},
-    Context,
-};
+use ggez::{graphics::DrawParam, Context};
 
 use super::Game;
 

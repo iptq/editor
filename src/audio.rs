@@ -4,8 +4,6 @@ use std::ptr;
 
 use anyhow::Result;
 use bass::constants::*;
-use libosu::timing::TimestampSec;
-use ordered_float::NotNan;
 
 pub struct AudioEngine {
     current_device: AudioDevice,

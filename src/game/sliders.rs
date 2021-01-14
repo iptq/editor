@@ -7,12 +7,7 @@ use ggez::{
     mint::Point2,
     Context,
 };
-use libosu::{
-    beatmap::Beatmap,
-    hitobject::{HitObject, SliderInfo},
-    math::Point,
-    spline::Spline,
-};
+use libosu::{beatmap::Beatmap, hitobject::SliderInfo, math::Point, spline::Spline};
 
 use super::{Game, SliderCache};
 

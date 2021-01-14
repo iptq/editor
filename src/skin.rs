@@ -1,5 +1,3 @@
-use std::path::{Path, PathBuf};
-
 use anyhow::Result;
 use ggez::{
     graphics::{self, DrawParam, Image},

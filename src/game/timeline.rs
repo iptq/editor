@@ -4,10 +4,7 @@ use ggez::{
     mint::Point2,
     Context,
 };
-use libosu::{
-    hitobject::HitObjectKind,
-    timing::{Duration, TimestampSec, TimingPointKind},
-};
+use libosu::{hitobject::HitObjectKind, timing::TimingPointKind};
 
 use crate::hitobject::HitObjectExt;
 

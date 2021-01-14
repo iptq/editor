@@ -13,11 +13,11 @@ running on windows
 
 wrapper script isn't written yet, in this case i just copied bass.dll to the project root
 
-roadmap
--------
+feature ideas
+-------------
 
-- [ ] long term:
-  - [ ] new framework
+- automatically hiding timeline / seek bar
+- multiple editor tabs
 
 license
 -------
