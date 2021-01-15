@@ -21,6 +21,8 @@ use ggez::{
     Context,
 };
 use image::io::Reader as ImageReader;
+use imgui::{Context as ImguiContext, Window};
+use imgui_winit_support::WinitPlatform;
 use libosu::{
     beatmap::Beatmap,
     hitobject::{HitObjectKind, SliderSplineKind, SpinnerInfo},
@@ -44,6 +46,7 @@ pub const DEFAULT_COLORS: &[(f32, f32, f32)] = &[
 ];
 
 pub type SliderCache = HashMap<Vec<Point<i32>>, Spline>;
+pub type Renderer = imgui_gfx_renderer::Renderer<crate::ColorFormat, crate::Resources>;
 
 pub struct PartialSliderState {
     start_time: TimestampMillis,
@@ -67,6 +70,10 @@ pub struct Game {
     pub skin: Skin,
     background_image: Option<Image>,
 
+    imgui: ImguiContext,
+    imgui_platform: WinitPlatform,
+    renderer: Renderer,
+
     frame: usize,
     slider_cache: SliderCache,
     combo_colors: Vec<Color>,
@@ -83,7 +90,11 @@ pub struct Game {
 }
 
 impl Game {
-    pub fn new() -> Result<Game> {
+    pub fn new(
+        imgui: ImguiContext,
+        imgui_platform: WinitPlatform,
+        renderer: Renderer,
+    ) -> Result<Game> {
         let audio_engine = AudioEngine::new()?;
         let skin = Skin::new();
 
@@ -93,6 +104,9 @@ impl Game {
         Ok(Game {
             is_playing: false,
             audio_engine,
+            imgui,
+            imgui_platform,
+            renderer,
             beatmap,
             song: None,
             skin,
@@ -478,6 +492,21 @@ impl Game {
                 }
             }
             _ => {}
+        }
+
+        use imgui::im_str;
+        {
+            let ui = self.imgui.frame();
+            Window::new(im_str!("wgats up")).build(&ui, || {
+                ui.text(im_str!("OsuEditor"));
+            });
+
+            let (factory, _, encoder, _, rtv) = graphics::gfx_objects(&mut ctx);
+            let window = graphics::window(&ctx);
+            self.imgui_platform.prepare_render(&ui, window);
+            let draw_data = ui.render();
+            self.renderer
+                .render(&mut factory, &mut encoder, &mut rtv, draw_data);
         }
 
         graphics::present(ctx)?;

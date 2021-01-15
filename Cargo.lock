@@ -829,9 +829,12 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "bass-sys",
+ "gfx",
+ "gfx_device_gl",
  "ggez",
  "image",
  "imgui",
+ "imgui-gfx-renderer",
  "imgui-winit-support",
  "libosu",
  "log",
@@ -1301,8 +1304,20 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "92a0077d3bb882960467aed0bc6eaf5d4033cb9b61bfdbb99c32d1288380032f"
 dependencies = [
  "bitflags",
+ "gfx",
  "imgui-sys",
  "parking_lot",
+]
+
+[[package]]
+name = "imgui-gfx-renderer"
+version = "0.6.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "12ba4627d85285cc33bf7804e9b10454cacb48e533cae16bd8d18761a1050fb6"
+dependencies = [
+ "gfx",
+ "imgui",
+ "winapi 0.3.9",
 ]
 
 [[package]]
