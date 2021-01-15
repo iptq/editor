@@ -223,8 +223,8 @@ impl Game {
         }
 
         let mut playfield_hitobjects = Vec::new();
-        let preempt = (self.beatmap.inner.difficulty.approach_preempt() as f64) / 1000.0;
-        let fade_in = (self.beatmap.inner.difficulty.approach_fade_time() as f64) / 1000.0;
+        let preempt = 1.5 * (self.beatmap.inner.difficulty.approach_preempt() as f64) / 1000.0;
+        let fade_in = 1.5 * (self.beatmap.inner.difficulty.approach_fade_time() as f64) / 1000.0;
 
         // TODO: tighten this loop even more by binary searching for the start of the timeline and
         // playfield hitobjects rather than looping through the entire beatmap, better yet, just

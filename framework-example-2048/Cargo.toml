@@ -1,0 +1,11 @@
+[package]
+name = "framework-example-2048"
+version = "0.1.0"
+authors = ["Michael Zhang <mail@mzhang.io>"]
+edition = "2018"
+
+[lib]
+crate-type = ["lib", "cdylib"]
+
+[dependencies]
+framework = { path = "../framework" }

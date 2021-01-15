@@ -11,6 +11,8 @@ debug = true
 members = [
     "bass-sys",
     "framework",
+    "framework-example-2048",
+    "multibuild",
 ]
 
 [dependencies]
@@ -33,3 +35,9 @@ rev = "81677d5ed88936c4a3e64af951ff0ae523c2d403"
 
 [features]
 clippy = []
+
+[package.metadata.android]
+apk_label = "OSU editor"
+target_sdk_version = 30
+min_sdk_version = 26
+fullscreen = true

@@ -1,0 +1,12 @@
+windowing:
+- winit on desktop
+- probably doesn't exist on mobile?
+- simulated in browser?
+
+rendering:
+- gfx can probably handle all platforms
+
+audio:
+- un4seen bass for desktop
+- shim for wrapping audio APIs
+

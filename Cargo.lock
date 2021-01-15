@@ -935,7 +935,15 @@ dependencies = [
 name = "framework"
 version = "0.1.0"
 dependencies = [
+ "ndk-glue",
  "winit",
+]
+
+[[package]]
+name = "framework-example-2048"
+version = "0.1.0"
+dependencies = [
+ "framework",
 ]
 
 [[package]]
@@ -1332,6 +1340,9 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "61124eeebbd69b8190558df225adf7e4caafce0d743919e5d6b19652314ec5ec"
 dependencies = [
  "cfg-if 1.0.0",
+ "js-sys",
+ "wasm-bindgen",
+ "web-sys",
 ]
 
 [[package]]
@@ -1742,6 +1753,10 @@ dependencies = [
  "winapi 0.2.8",
  "ws2_32-sys",
 ]
+
+[[package]]
+name = "multibuild"
+version = "0.1.0"
 
 [[package]]
 name = "ndk"
@@ -3404,7 +3419,9 @@ dependencies = [
  "percent-encoding",
  "raw-window-handle",
  "smithay-client-toolkit",
+ "wasm-bindgen",
  "wayland-client",
+ "web-sys",
  "winapi 0.3.9",
  "x11-dl",
 ]

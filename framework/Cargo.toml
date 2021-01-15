@@ -5,4 +5,7 @@ authors = ["Michael Zhang <mail@mzhang.io>"]
 edition = "2018"
 
 [dependencies]
-winit = "0.24.0"
+winit = { version = "0.24.0", features = ["web-sys"] }
+
+[target.'cfg(target_os = "android")'.dependencies]
+ndk-glue = "0.2.1"
