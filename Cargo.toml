@@ -25,6 +25,7 @@ structopt = "0.3.21"
 image = "0.23.12"
 imgui = "0.6.1"
 imgui-winit-support = "0.6.1"
+framework = { path = "framework" }
 
 [dependencies.libosu]
 git = "https://github.com/iptq/libosu"
