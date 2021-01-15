@@ -1,4 +1,4 @@
 mod game;
-mod renderer;
+mod graphics;
 
 pub use crate::game::Game;
