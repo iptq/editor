@@ -8,4 +8,11 @@ edition = "2018"
 crate-type = ["lib", "cdylib"]
 
 [dependencies]
+anyhow = "1.0.38"
 framework = { path = "../framework" }
+
+[target.'cfg(target_os = "android")'.dependencies]
+ndk-glue = "0.2.1"
+
+[package.metadata.android]
+apk_label = "2048"

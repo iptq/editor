@@ -1,3 +1,5 @@
+use framework_example_2048::real_main;
+
 fn main() {
-    println!("Hello, world!");
+    real_main();
 }

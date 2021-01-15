@@ -935,7 +935,9 @@ dependencies = [
 name = "framework"
 version = "0.1.0"
 dependencies = [
- "ndk-glue",
+ "anyhow",
+ "bass-sys",
+ "gfx-hal",
  "winit",
 ]
 
@@ -943,7 +945,9 @@ dependencies = [
 name = "framework-example-2048"
 version = "0.1.0"
 dependencies = [
+ "anyhow",
  "framework",
+ "ndk-glue",
 ]
 
 [[package]]
@@ -993,6 +997,16 @@ dependencies = [
  "draw_state",
  "gfx_core",
  "log",
+]
+
+[[package]]
+name = "gfx-hal"
+version = "0.6.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "18d0754f5b7a43915fd7466883b2d1bb0800d7cc4609178d0b27bf143b9e5123"
+dependencies = [
+ "bitflags",
+ "raw-window-handle",
 ]
 
 [[package]]
