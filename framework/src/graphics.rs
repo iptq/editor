@@ -1,10 +1,3 @@
-#[cfg(windows)]
-use gfx_backend_dx12 as back;
-#[cfg(target_os = "macos")]
-use gfx_backend_metal as back;
-#[cfg(not(any(windows, target_os = "macos")))]
-use gfx_backend_vulkan as back;
-
 use std::mem::ManuallyDrop;
 use std::ptr;
 

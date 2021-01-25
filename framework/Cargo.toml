@@ -9,10 +9,16 @@ anyhow = "1.0.38"
 gfx-hal = "0.6.0"
 winit = { version = "0.24.0", features = ["web-sys"] }
 bass-sys = { path = "../bass-sys" }
-gfx-backend-vulkan = "0.6.5"
+
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+gfx-backend-gl = "0.6.1"
+web-sys = "0.3.46"
 
 [target.'cfg(target_os = "macos")'.dependencies]
 gfx-backend-metal = "0.6.5"
 
 [target.'cfg(windows)'.dependencies]
 gfx-backend-dx12 = "0.6.13"
+
+[target.'cfg(not(any(window, target_os = "macos", target_arch = "wasm32")))'.dependencies]
+gfx-backend-vulkan = "0.6.5"

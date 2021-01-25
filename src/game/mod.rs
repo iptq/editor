@@ -16,7 +16,8 @@ use anyhow::Result;
 use ggez::{
     event::{KeyCode, MouseButton},
     graphics::{
-        self, Color, DrawMode, DrawParam, FilterMode, Image, Mesh, Rect, StrokeOptions, Text, WHITE,
+        self, CanvasGeneric, Color, DrawMode, DrawParam, FilterMode, GlBackendSpec, Image, Mesh,
+        Rect, StrokeOptions, Text, WHITE,
     },
     Context,
 };
@@ -69,6 +70,7 @@ pub struct Game {
 
     frame: usize,
     slider_cache: SliderCache,
+    seeker_cache: Option<CanvasGeneric<GlBackendSpec>>,
     combo_colors: Vec<Color>,
     selected_objects: Vec<usize>,
     tool: Tool,
@@ -98,6 +100,7 @@ impl Game {
             skin,
             frame: 0,
             slider_cache: SliderCache::default(),
+            seeker_cache: None,
             combo_colors: DEFAULT_COLORS
                 .iter()
                 .map(|(r, g, b)| Color::new(*r, *g, *b, 1.0))
