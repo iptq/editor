@@ -6,4 +6,7 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+
 # vim: set ts=2 tw=2 sw=2 et :
