@@ -13,11 +13,25 @@ impl EventHandler for Game {
         Ok(())
     }
 
-    fn mouse_motion_event(&mut self, _: &mut Context, x: f32, y: f32, _: f32, _: f32) {
+    fn mouse_motion_event(
+        &mut self,
+        _: &mut Context,
+        x: f32,
+        y: f32,
+        _: f32,
+        _: f32,
+    ) -> GameResult {
         self.mouse_pos = (x, y);
+        Ok(())
     }
 
-    fn mouse_button_down_event(&mut self, _: &mut Context, btn: MouseButton, x: f32, y: f32) {
+    fn mouse_button_down_event(
+        &mut self,
+        _: &mut Context,
+        btn: MouseButton,
+        x: f32,
+        y: f32,
+    ) -> GameResult {
         match btn {
             MouseButton::Left => {
                 use super::seeker::BOUNDS;
@@ -33,9 +47,16 @@ impl EventHandler for Game {
             MouseButton::Right => self.right_drag_start = Some((x, y)),
             _ => {}
         }
+        Ok(())
     }
 
-    fn mouse_button_up_event(&mut self, _: &mut Context, btn: MouseButton, x: f32, y: f32) {
+    fn mouse_button_up_event(
+        &mut self,
+        _: &mut Context,
+        btn: MouseButton,
+        x: f32,
+        y: f32,
+    ) -> GameResult {
         match btn {
             MouseButton::Left => {
                 if let Some((px, py)) = self.left_drag_start {
@@ -55,14 +76,17 @@ impl EventHandler for Game {
             }
             _ => {}
         }
+        Ok(())
     }
 
-    fn mouse_wheel_event(&mut self, _: &mut Context, x: f32, y: f32) {
+    fn mouse_wheel_event(&mut self, _: &mut Context, x: f32, y: f32) -> GameResult {
         self.seek_by_steps(-y as i32);
+        Ok(())
     }
 
-    fn key_up_event(&mut self, _: &mut Context, keycode: KeyCode, _: KeyMods) {
+    fn key_up_event(&mut self, _: &mut Context, keycode: KeyCode, _: KeyMods) -> GameResult {
         use KeyCode::*;
+
         match keycode {
             Space => self.toggle_playing(),
             Colon => {}
@@ -71,10 +95,19 @@ impl EventHandler for Game {
             }
             _ => {}
         };
+
+        Ok(())
     }
 
-    fn key_down_event(&mut self, _: &mut Context, keycode: KeyCode, mods: KeyMods, _: bool) {
+    fn key_down_event(
+        &mut self,
+        _: &mut Context,
+        keycode: KeyCode,
+        mods: KeyMods,
+        _: bool,
+    ) -> GameResult {
         use KeyCode::*;
+
         self.keymap.insert(keycode);
         match keycode {
             Key1 => self.switch_tool_to(Tool::Select),
@@ -111,6 +144,8 @@ impl EventHandler for Game {
             }
             _ => {}
         };
+
+        Ok(())
     }
 
     fn draw(&mut self, ctx: &mut Context) -> GameResult {

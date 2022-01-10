@@ -100,4 +100,10 @@ impl Sound {
             bass::BASS_ChannelSetAttribute(self.handle, BASS_ATTRIB_FREQ, val * rate as f32);
         }
     }
+
+    pub fn set_volume(&self, volume: f32) {
+        unsafe {
+            bass::BASS_ChannelSetAttribute(self.handle, BASS_ATTRIB_MUSIC_VOL_GLOBAL, volume);
+        }
+    }
 }

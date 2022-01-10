@@ -41,7 +41,7 @@ impl Game {
                     Point2::from([BOUNDS.w, line_y]),
                 ],
                 1.0,
-                graphics::WHITE,
+                Color::WHITE,
             )?;
             graphics::draw(ctx, &line, DrawParam::default())?;
 
@@ -75,7 +75,7 @@ impl Game {
                         Point2::from([x, 0.8 * BOUNDS.h]),
                     ],
                     4.0,
-                    graphics::WHITE,
+                    Color::WHITE,
                 )?;
                 graphics::draw(ctx, &line, DrawParam::default())?;
             }
@@ -85,7 +85,13 @@ impl Game {
         };
 
         if let Some(canvas) = &self.seeker_cache {
-            graphics::draw(ctx, canvas, DrawParam::default().dest([BOUNDS.x, BOUNDS.y]).scale([1.0, 10.0]))?;
+            graphics::draw(
+                ctx,
+                canvas,
+                DrawParam::default()
+                    .dest([BOUNDS.x, BOUNDS.y])
+                    .scale([1.0, 10.0]),
+            )?;
         }
         Ok(())
     }

@@ -50,13 +50,13 @@ impl Game {
             ctx,
             DrawMode::Stroke(opts),
             spline_mapped.as_ref(),
-            graphics::WHITE,
+            Color::WHITE,
         )?;
         graphics::set_canvas(ctx, Some(&canvas));
         graphics::clear(ctx, Color::new(0.0, 0.0, 0.0, 0.0));
         graphics::draw(ctx, &body, DrawParam::default())?;
         graphics::set_canvas(ctx, None);
-        let mut border_color = graphics::WHITE;
+        let mut border_color = Color::WHITE;
         border_color.a = color.a;
         graphics::draw(ctx, &canvas, DrawParam::default().color(border_color))?;
 
@@ -70,7 +70,7 @@ impl Game {
             ctx,
             DrawMode::Stroke(opts),
             spline_mapped.as_ref(),
-            graphics::WHITE,
+            Color::WHITE,
         )?;
         graphics::set_canvas(ctx, Some(&canvas));
         graphics::clear(ctx, Color::new(0.0, 0.0, 0.0, 0.0));
@@ -151,7 +151,7 @@ impl Game {
                 ctx,
                 DrawMode::Stroke(StrokeOptions::default()),
                 &points_mapped,
-                graphics::WHITE,
+                Color::WHITE,
             )?;
             graphics::draw(ctx, &frame, DrawParam::default())?;
         }
@@ -160,7 +160,7 @@ impl Game {
         let mut i = 0;
         while i < points_mapped.len() {
             let fst = points_mapped[i];
-            let mut color = graphics::WHITE;
+            let mut color = Color::WHITE;
             if i < points_mapped.len() - 1 {
                 let snd = points_mapped[i + 1];
                 if fst.eq(&snd) {

@@ -17,7 +17,7 @@ use ggez::{
     event::{KeyCode, MouseButton},
     graphics::{
         self, CanvasGeneric, Color, DrawMode, DrawParam, FilterMode, GlBackendSpec, Image, Mesh,
-        Rect, StrokeOptions, Text, WHITE,
+        Rect, StrokeOptions, Text,
     },
     Context,
 };
@@ -175,6 +175,7 @@ impl Game {
         }
 
         let song = Sound::create(dir.join(&self.beatmap.inner.audio_filename))?;
+        song.set_volume(0.1);
         self.song = Some(song);
         self.timestamp_changed()?;
 
@@ -215,7 +216,7 @@ impl Game {
             )
             .as_ref(),
         );
-        graphics::queue_text(ctx, &text, [0.0, 0.0], Some(WHITE));
+        graphics::queue_text(ctx, &text, [0.0, 0.0], Some(Color::WHITE));
         graphics::draw_queued_text(ctx, DrawParam::default(), None, FilterMode::Linear)?;
 
         struct DrawInfo<'a> {
@@ -399,7 +400,7 @@ impl Game {
                             ctx,
                             DrawMode::Stroke(StrokeOptions::default()),
                             drag_rect,
-                            WHITE,
+                            Color::WHITE,
                         )?;
                         graphics::draw(ctx, &drag_rect, DrawParam::default())?;
                     }

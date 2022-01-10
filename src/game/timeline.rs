@@ -1,6 +1,6 @@
 use anyhow::Result;
 use ggez::{
-    graphics::{self, Color, DrawMode, DrawParam, LineCap, Mesh, Rect, StrokeOptions, WHITE},
+    graphics::{self, Color, DrawMode, DrawParam, LineCap, Mesh, Rect, StrokeOptions},
     mint::Point2,
     Context,
 };
@@ -19,7 +19,7 @@ pub const TICKS: &[&[(Color, f32)]] = &[
     &[],
     &[],
     &[],
-    &[(WHITE, 1.0), (BLUE, 0.5), (RED, 0.5), (BLUE, 0.5)],
+    &[(Color::WHITE, 1.0), (BLUE, 0.5), (RED, 0.5), (BLUE, 0.5)],
 ];
 
 impl Game {
@@ -37,7 +37,7 @@ impl Game {
                 Point2::from([timeline_current_line_x, BOUNDS.y + BOUNDS.h]),
             ],
             2.0,
-            graphics::WHITE,
+            Color::WHITE,
         )?;
         graphics::draw(ctx, &current_line, DrawParam::default())?;
 
@@ -136,7 +136,7 @@ impl Game {
                 Point2::from([BOUNDS.x + BOUNDS.w, BOUNDS.y + BOUNDS.h]),
             ],
             2.0,
-            graphics::WHITE,
+            Color::WHITE,
         )?;
         graphics::draw(ctx, &bottom_line, DrawParam::default())?;
 
