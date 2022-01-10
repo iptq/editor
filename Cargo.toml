@@ -34,7 +34,6 @@ gfx_device_gl = "0.16.2"
 
 [dependencies.libosu]
 path = "../libosu"
-version = "*"
 
 [features]
 clippy = []

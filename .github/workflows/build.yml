@@ -4,13 +4,24 @@ jobs:
   build:
     runs-on: windows-2019
     steps:
+      # Check out code
       - uses: actions/checkout@v2
+        with:
+          path: editor
+      - uses: actions/checkout@v2
+        repository: iptq/libosu
+        with:
+          path: libosu
+
       - uses: actions-rs/toolchain@v1
         with:
           toolchain: stable
-      - run: |
+      - name: build
+        working-directory: editor
+        run: |
           cargo build --release
       - uses: actions/upload-artifact@v2
+        working-directory: editor
         with:
           name: editor.exe
           path: target/release/editor.exe
