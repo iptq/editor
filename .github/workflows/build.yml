@@ -23,9 +23,8 @@ jobs:
           cargo build --release
 
       - uses: actions/upload-artifact@v2
-        working-directory: editor
         with:
           name: editor.exe
-          path: target/release/editor.exe
+          path: editor/target/release/editor.exe
 
 # vim: set ts=2 tw=2 sw=2 et :
