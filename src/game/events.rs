@@ -22,6 +22,7 @@ impl EventHandler for Game {
         _: f32,
     ) -> GameResult {
         self.mouse_pos = (x, y);
+        self.imgui.update_mouse_pos(x, y);
         Ok(())
     }
 
@@ -32,6 +33,9 @@ impl EventHandler for Game {
         x: f32,
         y: f32,
     ) -> GameResult {
+        self.imgui.update_mouse_down(btn);
+        // TODO: figure out if the UI handled anything, and then whether or not to keep going into
+        // letting the rest of the code handle the mouse press or not
         match btn {
             MouseButton::Left => {
                 use super::seeker::BOUNDS;
@@ -57,6 +61,7 @@ impl EventHandler for Game {
         x: f32,
         y: f32,
     ) -> GameResult {
+        self.imgui.update_mouse_up(btn);
         match btn {
             MouseButton::Left => {
                 if let Some((px, py)) = self.left_drag_start {
@@ -84,8 +89,9 @@ impl EventHandler for Game {
         Ok(())
     }
 
-    fn key_up_event(&mut self, _: &mut Context, keycode: KeyCode, _: KeyMods) -> GameResult {
+    fn key_up_event(&mut self, _: &mut Context, keycode: KeyCode, keymods: KeyMods) -> GameResult {
         use KeyCode::*;
+        self.imgui.update_key_up(keycode, keymods);
 
         match keycode {
             Space => self.toggle_playing(),
@@ -103,10 +109,11 @@ impl EventHandler for Game {
         &mut self,
         _: &mut Context,
         keycode: KeyCode,
-        mods: KeyMods,
+        keymods: KeyMods,
         _: bool,
     ) -> GameResult {
         use KeyCode::*;
+        self.imgui.update_key_down(keycode, keymods);
 
         self.keymap.insert(keycode);
         match keycode {
@@ -120,7 +127,7 @@ impl EventHandler for Game {
                     ..
                 }) = &self.current_uninherited_timing_point
                 {
-                    let steps = -if mods.contains(KeyMods::SHIFT) {
+                    let steps = -if keymods.contains(KeyMods::SHIFT) {
                         info.meter as i32
                     } else {
                         1
@@ -134,7 +141,7 @@ impl EventHandler for Game {
                     ..
                 }) = &self.current_uninherited_timing_point
                 {
-                    let steps = if mods.contains(KeyMods::SHIFT) {
+                    let steps = if keymods.contains(KeyMods::SHIFT) {
                         info.meter as i32
                     } else {
                         1

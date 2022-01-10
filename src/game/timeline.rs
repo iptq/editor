@@ -56,13 +56,13 @@ impl Game {
                 &uninherited_timing_points[i],
                 uninherited_timing_points.get(i + 1),
             );
-            let fst_time = fst.time.as_seconds().0.into_inner();
+            let fst_time = fst.time.as_seconds();
             if let TimingPointKind::Uninherited(info) = &fst.kind {
                 last_uninherited = Some(info);
             }
 
             let snd_time = if let Some(snd) = snd {
-                let snd_time = snd.time.as_seconds().0.into_inner();
+                let snd_time = snd.time.as_seconds();
                 if snd_time >= timeline_left && snd_time <= timeline_right {
                     Some(snd_time)
                 } else {
@@ -85,7 +85,7 @@ impl Game {
                     let beat = last_uninherited.mpb / 1000.0;
                     let ticks = TICKS[last_uninherited.meter as usize];
 
-                    let mut time = fst.time.as_seconds().0.into_inner();
+                    let mut time = fst.time.as_seconds();
                     let passed_measures = ((timeline_left - time) / beat).floor();
                     time += passed_measures * beat;
 
@@ -158,9 +158,7 @@ impl Game {
             .beatmap
             .inner
             .get_hitobject_end_time(&ho.inner)
-            .as_seconds()
-            .0
-            .into_inner();
+            .unwrap();
 
         let color = self.combo_colors[ho.color_idx];
 
@@ -274,6 +272,7 @@ impl Game {
                 ho.number,
                 [head_x, timeline_y + BOUNDS.h / 2.0],
                 BOUNDS.h / 2.0,
+                Color::WHITE,
             )?;
         }
 

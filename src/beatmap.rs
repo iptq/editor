@@ -62,12 +62,15 @@ impl BeatmapExt {
                         break;
                     }
 
-                    let end_time = self.inner.get_hitobject_end_time(&stack_base_obj.inner);
-                    let stack_threshold =
-                        self.inner.difficulty.approach_preempt() as f64 * self.inner.stack_leniency;
+                    let end_time = self
+                        .inner
+                        .get_hitobject_end_time(&stack_base_obj.inner)
+                        .unwrap();
+                    let stack_threshold = self.inner.difficulty.approach_preempt().as_seconds()
+                        * self.inner.stack_leniency;
 
                     // We are no longer within stacking range of the next object.
-                    if (object_n.inner.start_time.0 - end_time.0) as f64 > stack_threshold {
+                    if (object_n.inner.start_time.0 as f64 - end_time) > stack_threshold {
                         break;
                     }
 
@@ -114,7 +117,7 @@ impl BeatmapExt {
             }
 
             let stack_threshold =
-                self.inner.difficulty.approach_preempt() as f64 * self.inner.stack_leniency;
+                self.inner.difficulty.approach_preempt().as_seconds() * self.inner.stack_leniency;
 
             match object_i.inner.kind {
                 HitObjectKind::Circle => {
@@ -125,9 +128,10 @@ impl BeatmapExt {
 
                         let end_time = self
                             .inner
-                            .get_hitobject_end_time(&self.hit_objects[n].inner);
+                            .get_hitobject_end_time(&self.hit_objects[n].inner)
+                            .unwrap();
 
-                        if (self.hit_objects[iidx].inner.start_time.0 - end_time.0) as f64
+                        if (self.hit_objects[iidx].inner.start_time.0 as f64 - end_time)
                             > stack_threshold
                         {
                             break;

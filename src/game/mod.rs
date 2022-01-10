@@ -22,17 +22,20 @@ use ggez::{
     Context,
 };
 use image::io::Reader as ImageReader;
+use imgui::Window;
+use imgui_winit_support::WinitPlatform;
 use libosu::{
     beatmap::Beatmap,
     hitobject::{HitObjectKind, SliderSplineKind, SpinnerInfo},
     math::Point,
     spline::Spline,
-    timing::{TimestampMillis, TimingPoint, TimingPointKind},
+    timing::{Millis, TimingPoint, TimingPointKind},
 };
 
 use crate::audio::{AudioEngine, Sound};
 use crate::beatmap::{BeatmapExt, STACK_DISTANCE};
 use crate::hitobject::HitObjectExt;
+use crate::imgui_wrapper::ImGuiWrapper;
 use crate::skin::Skin;
 use crate::utils::{self, rect_contains};
 
@@ -47,7 +50,7 @@ pub const DEFAULT_COLORS: &[(f32, f32, f32)] = &[
 pub type SliderCache = HashMap<Vec<Point<i32>>, Spline>;
 
 pub struct PartialSliderState {
-    start_time: TimestampMillis,
+    start_time: Millis,
     kind: SliderSplineKind,
     control_points: Vec<Point<i32>>,
     pixel_length: f64,
@@ -62,6 +65,7 @@ pub enum Tool {
 
 pub struct Game {
     is_playing: bool,
+    imgui: ImGuiWrapper,
     audio_engine: AudioEngine,
     song: Option<Sound>,
     beatmap: BeatmapExt,
@@ -85,7 +89,7 @@ pub struct Game {
 }
 
 impl Game {
-    pub fn new() -> Result<Game> {
+    pub fn new(imgui: ImGuiWrapper) -> Result<Game> {
         let audio_engine = AudioEngine::new()?;
         let skin = Skin::new();
 
@@ -94,6 +98,7 @@ impl Game {
 
         Ok(Game {
             is_playing: false,
+            imgui,
             audio_engine,
             beatmap,
             song: None,
@@ -208,7 +213,7 @@ impl Game {
         self.draw_grid(ctx)?;
 
         let time = self.song.as_ref().unwrap().position()?;
-        let time_millis = TimestampMillis((time * 1000.0) as i32);
+        let time_millis = Millis::from_seconds(time);
         let text = Text::new(
             format!(
                 "tool: {:?} time: {:.4}, mouse: {:?}",
@@ -221,20 +226,39 @@ impl Game {
 
         struct DrawInfo<'a> {
             hit_object: &'a HitObjectExt,
-            opacity: f64,
+            fade_opacity: f64,
             end_time: f64,
             color: Color,
+            /// Whether or not the circle (slider head for sliders) should appear to have already
+            /// been hit in the editor after the object's time has already come.
+            circle_is_hit: bool,
         }
 
+        // figure out what objects will be visible on the screen at the current instant
+        // 1.5 cus editor so people can see objects for longer durations
         let mut playfield_hitobjects = Vec::new();
-        let preempt = 1.5 * (self.beatmap.inner.difficulty.approach_preempt() as f64) / 1000.0;
-        let fade_in = 1.5 * (self.beatmap.inner.difficulty.approach_fade_time() as f64) / 1000.0;
+        let preempt = 1.5
+            * self
+                .beatmap
+                .inner
+                .difficulty
+                .approach_preempt()
+                .as_seconds();
+        let fade_in = 1.5
+            * self
+                .beatmap
+                .inner
+                .difficulty
+                .approach_fade_time()
+                .as_seconds();
+        let fade_out_time = fade_in; // TODO: figure out what this number actually is
+        let fade_out_offset = preempt; // TODO: figure out what this number actually is
 
         // TODO: tighten this loop even more by binary searching for the start of the timeline and
         // playfield hitobjects rather than looping through the entire beatmap, better yet, just
         // keeping track of the old index will probably be much faster
         for ho in self.beatmap.hit_objects.iter().rev() {
-            let ho_time = (ho.inner.start_time.0 as f64) / 1000.0;
+            let ho_time = ho.inner.start_time.as_seconds();
             let color = self.combo_colors[ho.color_idx];
 
             // draw in timeline
@@ -242,29 +266,41 @@ impl Game {
 
             // draw hitobject in playfield
             let end_time;
-            let opacity = if time > ho_time - fade_in {
-                1.0
-            } else {
-                // TODO: calculate ease
-                (time - (ho_time - preempt)) / fade_in
-            };
             match ho.inner.kind {
                 HitObjectKind::Circle => end_time = ho_time,
                 HitObjectKind::Slider(_) => {
                     let duration = self.beatmap.inner.get_slider_duration(&ho.inner).unwrap();
-                    end_time = ho_time + duration / 1000.0;
+                    end_time = ho_time + duration;
                 }
                 HitObjectKind::Spinner(SpinnerInfo {
                     end_time: spinner_end,
-                }) => end_time = (spinner_end.0 as f64) / 1000.0,
+                }) => end_time = spinner_end.as_seconds(),
             };
 
-            if ho_time - preempt <= time && time <= end_time {
+            let fade_opacity = if time <= ho_time - fade_in {
+                // before the hitobject's time arrives, it fades in
+                // TODO: calculate ease
+                (time - (ho_time - preempt)) / fade_in
+            } else if time < ho_time + fade_out_time {
+                // while the object is on screen the opacity should be 1
+                1.0
+            } else if time < end_time + fade_out_offset {
+                // after the hitobject's time, it fades out
+                // TODO: calculate ease
+                ((end_time + fade_out_offset) - time) / fade_out_time
+            } else {
+                // completely faded out
+                0.0
+            };
+            let circle_is_hit = time > ho_time;
+
+            if ho_time - preempt <= time && time <= end_time + fade_out_offset {
                 playfield_hitobjects.push(DrawInfo {
                     hit_object: ho,
-                    opacity,
+                    fade_opacity,
                     end_time,
                     color,
+                    circle_is_hit,
                 });
             }
         }
@@ -279,21 +315,20 @@ impl Game {
 
         for draw_info in playfield_hitobjects.iter() {
             let ho = draw_info.hit_object;
-            let ho_time = (ho.inner.start_time.0 as f64) / 1000.0;
+            let ho_time = ho.inner.start_time.as_seconds();
             let stacking = ho.stacking as f32 * STACK_DISTANCE as f32;
             let pos = [
                 PLAYFIELD_BOUNDS.x + osupx_scale_x * (ho.inner.pos.x as f32 - stacking),
                 PLAYFIELD_BOUNDS.y + osupx_scale_y * (ho.inner.pos.y as f32 - stacking),
             ];
-            let color = draw_info.color;
+            let mut color = draw_info.color;
+            color.a = 0.6 * draw_info.fade_opacity as f32;
 
             let mut slider_info = None;
             if let HitObjectKind::Slider(info) = &ho.inner.kind {
                 let mut control_points = vec![ho.inner.pos];
                 control_points.extend(&info.control_points);
 
-                let mut color = color;
-                color.a = 0.6 * draw_info.opacity as f32;
                 Game::render_slider_body(
                     &mut self.slider_cache,
                     info,
@@ -323,6 +358,7 @@ impl Game {
             }
 
             // draw main hitcircle
+            let faded_color = Color::new(1.0, 1.0, 1.0, 0.6 * draw_info.fade_opacity as f32);
             self.skin.hitcircle.draw(
                 ctx,
                 (cs_real * 2.0, cs_real * 2.0),
@@ -331,15 +367,15 @@ impl Game {
             self.skin.hitcircleoverlay.draw(
                 ctx,
                 (cs_real * 2.0, cs_real * 2.0),
-                DrawParam::default().dest(pos),
+                DrawParam::default().dest(pos).color(faded_color),
             )?;
 
             // draw numbers
-            self.draw_numbers_on_circle(ctx, ho.number, pos, cs_real)?;
+            self.draw_numbers_on_circle(ctx, ho.number, pos, cs_real, faded_color)?;
 
             if let Some((info, control_points)) = slider_info {
                 let spline = self.slider_cache.get(&control_points).unwrap();
-                Game::render_slider_wireframe(ctx, &control_points, PLAYFIELD_BOUNDS)?;
+                Game::render_slider_wireframe(ctx, &control_points, PLAYFIELD_BOUNDS, faded_color)?;
 
                 if time > ho_time && time < draw_info.end_time {
                     let elapsed_time = time - ho_time;
@@ -380,6 +416,19 @@ impl Game {
         }
 
         self.draw_seeker(ctx)?;
+
+        let mut show = true;
+        self.imgui.render(ctx, 1.0, |ui| {
+            // Window
+            Window::new("Hello world")
+                .size([300.0, 600.0], imgui::Condition::FirstUseEver)
+                .position([50.0, 50.0], imgui::Condition::FirstUseEver)
+                .build(&ui, || {
+                    // Your window stuff here!
+                    ui.text("Hi from this label!");
+                });
+            ui.show_demo_window(&mut show);
+        });
 
         // draw whatever tool user is using
         let (mx, my) = self.mouse_pos;
@@ -463,7 +512,7 @@ impl Game {
                         debug!("done rendering slider body");
                     }
 
-                    Game::render_slider_wireframe(ctx, &nodes, PLAYFIELD_BOUNDS)?;
+                    Game::render_slider_wireframe(ctx, &nodes, PLAYFIELD_BOUNDS, Color::WHITE)?;
                     debug!("done rendering slider wireframe");
                 } else {
                     if rect_contains(&PLAYFIELD_BOUNDS, mx, my) {
@@ -498,7 +547,7 @@ impl Game {
             let pos = song.position()?;
 
             if let Some(timing_point) = self.beatmap.inner.timing_points.first() {
-                if pos < timing_point.time.as_seconds().0.into_inner() {
+                if pos < timing_point.time.as_seconds() {
                     if let TimingPointKind::Uninherited(_) = &timing_point.kind {
                         self.current_uninherited_timing_point = Some(timing_point.clone());
                     }
@@ -508,7 +557,7 @@ impl Game {
             let mut found_uninherited = false;
             let mut found_inherited = false;
             for timing_point in self.beatmap.inner.timing_points.iter() {
-                if pos < timing_point.time.as_seconds().0.into_inner() {
+                if pos < timing_point.time.as_seconds() {
                     continue;
                 }
 
@@ -542,7 +591,7 @@ impl Game {
                 ..
             }) = &self.current_uninherited_timing_point
             {
-                let diff = pos - time.as_seconds().0.into_inner();
+                let diff = pos - time.as_seconds();
                 let tick = info.mpb / 1000.0 / info.meter as f64;
                 let beats = (diff / tick).round();
                 let frac = diff - beats * tick;
@@ -571,17 +620,17 @@ impl Game {
         if let Some(song) = &self.song {
             println!("song exists! {:?} {:?}", btn, self.tool);
             let time = song.position()?;
-            let time_millis = TimestampMillis((time * 1000.0) as i32);
+            let time_millis = Millis::from_seconds(time);
 
             if let (MouseButton::Left, Tool::Select) = (btn, &self.tool) {
             } else if let (MouseButton::Left, Tool::Circle) = (btn, &self.tool) {
                 println!("left, circle, {:?} {} {}", PLAYFIELD_BOUNDS, x, y);
                 if rect_contains(&PLAYFIELD_BOUNDS, x, y) {
-                    let time = (song.position()? * 1000.0) as i32;
+                    let time = Millis::from_seconds(song.position()?);
                     match self
                         .beatmap
                         .hit_objects
-                        .binary_search_by_key(&time, |ho| ho.inner.start_time.0)
+                        .binary_search_by_key(&time, |ho| ho.inner.start_time)
                     {
                         Ok(v) => {
                             println!("unfortunately already found at idx {}", v);
@@ -593,7 +642,7 @@ impl Game {
                             };
 
                             let inner = HitObject {
-                                start_time: TimestampMillis(time),
+                                start_time: time,
                                 pos,
                                 kind: HitObjectKind::Circle,
                                 new_combo: false,

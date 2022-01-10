@@ -1,5 +1,8 @@
 use anyhow::Result;
-use ggez::{graphics::DrawParam, Context};
+use ggez::{
+    graphics::{Color, DrawParam},
+    Context,
+};
 
 use super::Game;
 
@@ -10,6 +13,7 @@ impl Game {
         number: usize,
         pos: [f32; 2],
         cs: f32,
+        color: Color,
     ) -> Result<()> {
         let number = number.to_string();
         let digits = number.len();
@@ -53,7 +57,7 @@ impl Game {
             digit.draw(
                 ctx,
                 (w, real_height),
-                DrawParam::default().dest([real_x, real_y]),
+                DrawParam::default().dest([real_x, real_y]).color(color),
             )?;
         }
 

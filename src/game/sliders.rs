@@ -130,6 +130,7 @@ impl Game {
         ctx: &mut Context,
         control_points: &[Point<i32>],
         rect: Rect,
+        color: Color,
     ) -> Result<()> {
         let osupx_scale_x = rect.w as f32 / 512.0;
         let osupx_scale_y = rect.h as f32 / 384.0;
@@ -151,7 +152,7 @@ impl Game {
                 ctx,
                 DrawMode::Stroke(StrokeOptions::default()),
                 &points_mapped,
-                Color::WHITE,
+                color,
             )?;
             graphics::draw(ctx, &frame, DrawParam::default())?;
         }
@@ -160,7 +161,7 @@ impl Game {
         let mut i = 0;
         while i < points_mapped.len() {
             let fst = points_mapped[i];
-            let mut color = Color::WHITE;
+            let mut color = color;
             if i < points_mapped.len() - 1 {
                 let snd = points_mapped[i + 1];
                 if fst.eq(&snd) {

@@ -54,7 +54,7 @@ impl Game {
                         TimingPointKind::Uninherited(_) => Color::new(0.8, 0.0, 0.0, 0.6),
                     };
 
-                    let percent = timing_point.time.as_seconds().0.into_inner() / len;
+                    let percent = timing_point.time.as_seconds() / len;
                     let x = percent as f32 * BOUNDS.w;
 
                     let line = Mesh::new_line(
