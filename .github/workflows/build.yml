@@ -9,17 +9,19 @@ jobs:
         with:
           path: editor
       - uses: actions/checkout@v2
-        repository: iptq/libosu
         with:
+          repository: iptq/libosu
           path: libosu
 
       - uses: actions-rs/toolchain@v1
         with:
           toolchain: stable
+
       - name: build
         working-directory: editor
         run: |
           cargo build --release
+
       - uses: actions/upload-artifact@v2
         working-directory: editor
         with:
