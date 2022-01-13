@@ -1,13 +1,20 @@
 use anyhow::Result;
 use ggez::Context;
-use imgui::{Condition, MenuItem, TabBar, TabItem, Window};
+use imgui::{Condition, MenuItem, Slider, TabBar, TabItem, Window};
 
 use super::Game;
 
 #[derive(Debug, Default)]
 pub struct UiState {
-    song_setup_selected: bool,
+    song_setup_opened: bool,
     song_setup_artist: String,
+    song_setup_romanized_artist: String,
+    song_setup_title: String,
+    song_setup_romanized_title: String,
+    song_setup_mapper: String,
+    song_setup_source: String,
+    song_setup_tags: String,
+    song_setup_hp: f64,
 }
 
 impl Game {
@@ -19,7 +26,7 @@ impl Game {
                     MenuItem::new("Save <C-s>").build(ui);
                     MenuItem::new("Create Difficulty").build(ui);
                     ui.separator();
-                    MenuItem::new("Song Setup").build_with_ref(ui, &mut state.song_setup_selected);
+                    MenuItem::new("Song Setup").build_with_ref(ui, &mut state.song_setup_opened);
                     MenuItem::new("Revert to Saved <C-l>").build(ui);
                     ui.separator();
                     MenuItem::new("Open Song Folder").build(ui);
@@ -50,24 +57,53 @@ impl Game {
                 menu_bar.end();
             }
 
-            if state.song_setup_selected {
+            if state.song_setup_opened {
                 Window::new("Song Setup")
-                    .size([80.0, 120.0], Condition::Appearing)
+                    .opened(&mut false)
+                    .collapsible(false)
+                    .always_auto_resize(true)
+                    .size([180.0, 240.0], Condition::Appearing)
                     .build(&ui, || {
                         TabBar::new("song_setup").build(&ui, || {
                             TabItem::new("General").build(&ui, || {
                                 ui.group(|| {
-                                    ui.text("Artist");
-                                    ui.same_line();
-                                    ui.input_text("", &mut state.song_setup_artist).build();
+                                    ui.input_text("Artist", &mut state.song_setup_artist)
+                                        .build();
+                                    ui.input_text(
+                                        "Romanized Artist",
+                                        &mut state.song_setup_romanized_artist,
+                                    )
+                                    .build();
+                                    ui.input_text("Title", &mut state.song_setup_title).build();
+                                    ui.input_text(
+                                        "Romanized Title",
+                                        &mut state.song_setup_romanized_title,
+                                    )
+                                    .build();
+                                    ui.input_text("Mapper", &mut state.song_setup_mapper)
+                                        .build();
+                                    ui.input_text("Source", &mut state.song_setup_source)
+                                        .build();
+                                    ui.input_text("Tags", &mut state.song_setup_tags).build();
                                 });
                             });
-                            TabItem::new("Difficulty").build(&ui, || {});
+                            TabItem::new("Difficulty").build(&ui, || {
+                                Slider::new("HP Drain Rate", 0.0, 10.0)
+                                    .display_format("%.1f")
+                                    .build(ui, &mut state.song_setup_hp);
+                                Slider::new("Circle Size", 0.0, 10.0)
+                                    .display_format("%.1f")
+                                    .build(ui, &mut state.song_setup_hp);
+                            });
                             TabItem::new("Audio").build(&ui, || {});
                             TabItem::new("Colors").build(&ui, || {});
                             TabItem::new("Design").build(&ui, || {});
                             TabItem::new("Advanced").build(&ui, || {});
                         });
+
+                        ui.button("OK");
+                        ui.same_line();
+                        ui.button("Cancel");
                     });
             }
         });
