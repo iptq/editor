@@ -27,7 +27,7 @@ use ggez::Context;
 use gfx_core::{handle::RenderTargetView, memory::Typed};
 use gfx_device_gl;
 
-use imgui::{Context as ImContext, FontId, Key, Ui, Window, FontSource};
+use imgui::{Context as ImContext, FontId, FontSource, Key, Ui};
 use imgui_gfx_renderer::*;
 
 use std::time::Instant;

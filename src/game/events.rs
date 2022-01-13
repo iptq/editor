@@ -26,6 +26,15 @@ impl EventHandler for Game {
         if self.imgui.want_capture_mouse() {
             return Ok(());
         }
+
+        if self.seeker_drag {
+            use super::seeker::BOUNDS;
+            let jump_percent = (x - BOUNDS.x) / BOUNDS.w;
+            if let Some(song) = &self.song {
+                let pos = jump_percent as f64 * song.length().unwrap();
+                song.set_position(pos);
+            }
+        }
         Ok(())
     }
 
@@ -47,6 +56,7 @@ impl EventHandler for Game {
             MouseButton::Left => {
                 use super::seeker::BOUNDS;
                 if rect_contains(&BOUNDS, x, y) {
+                    self.seeker_drag = true;
                     let jump_percent = (x - BOUNDS.x) / BOUNDS.w;
                     if let Some(song) = &self.song {
                         let pos = jump_percent as f64 * song.length().unwrap();
@@ -68,7 +78,16 @@ impl EventHandler for Game {
         x: f32,
         y: f32,
     ) -> GameResult {
+        // let go of the seeker
+        if self.seeker_drag {
+            self.seeker_drag = false;
+        }
+
         self.imgui.update_mouse_up(btn);
+        if self.imgui.want_capture_mouse() {
+            return Ok(());
+        }
+
         match btn {
             MouseButton::Left => {
                 if let Some((px, py)) = self.left_drag_start {

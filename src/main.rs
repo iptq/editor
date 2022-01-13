@@ -20,11 +20,8 @@ use std::path::PathBuf;
 use anyhow::Result;
 use ggez::{
     conf::{WindowMode, WindowSetup},
-    event, graphics, ContextBuilder,
+    event, ContextBuilder,
 };
-use imgui::{Context as ImContext, FontConfig, FontSource};
-use imgui_gfx_renderer::{Renderer, Shaders};
-use imgui_winit_support::{HiDpiMode, WinitPlatform};
 use imgui_wrapper::ImGuiWrapper;
 use structopt::StructOpt;
 
