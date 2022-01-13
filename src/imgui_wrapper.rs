@@ -27,7 +27,7 @@ use ggez::Context;
 use gfx_core::{handle::RenderTargetView, memory::Typed};
 use gfx_device_gl;
 
-use imgui::{Context as ImContext, Key, Ui, Window};
+use imgui::{Context as ImContext, FontId, Key, Ui, Window, FontSource};
 use imgui_gfx_renderer::*;
 
 use std::time::Instant;
@@ -44,6 +44,7 @@ struct MouseState {
 pub struct ImGuiWrapper {
     pub imgui: ImContext,
     pub renderer: Renderer<gfx_core::format::Rgba8, gfx_device_gl::Resources>,
+    font: FontId,
     last_frame: Instant,
     mouse_state: MouseState,
 }
@@ -54,6 +55,13 @@ impl ImGuiWrapper {
         let mut imgui = ImContext::create();
         imgui.set_ini_filename(None);
         let (factory, gfx_device, _, _, _) = graphics::gfx_objects(ctx);
+
+        // Font
+        let font = imgui.fonts().add_font(&[FontSource::TtfData {
+            data: include_bytes!("../resources/Roboto-Regular.ttf"),
+            size_pixels: 16.0,
+            config: None,
+        }]);
 
         // Shaders
         let shaders = {
@@ -74,10 +82,10 @@ impl ImGuiWrapper {
         };
 
         // Renderer
-        let mut renderer = Renderer::init(&mut imgui, &mut *factory, shaders).unwrap();
+        let renderer = Renderer::init(&mut imgui, &mut *factory, shaders).unwrap();
 
         {
-            let mut io = imgui.io_mut();
+            let io = imgui.io_mut();
             io[Key::Tab] = KeyCode::Tab as _;
             io[Key::LeftArrow] = KeyCode::Left as _;
             io[Key::RightArrow] = KeyCode::Right as _;
@@ -106,6 +114,7 @@ impl ImGuiWrapper {
         Self {
             imgui,
             renderer,
+            font,
             last_frame: Instant::now(),
             mouse_state: MouseState::default(),
         }
@@ -130,7 +139,9 @@ impl ImGuiWrapper {
         self.imgui.io_mut().delta_time = delta_s;
 
         let ui = self.imgui.frame();
+        let font = ui.push_font(self.font);
         run_ui(&ui);
+        font.pop();
 
         // Render
         let (factory, _, encoder, _, render_target) = graphics::gfx_objects(ctx);
@@ -213,5 +224,15 @@ impl ImGuiWrapper {
     pub fn update_scroll(&mut self, x: f32, y: f32) {
         self.mouse_state.wheel += y;
         self.mouse_state.wheel_h += x;
+    }
+
+    pub fn want_capture_mouse(&self) -> bool {
+        let io = self.imgui.io();
+        io.want_capture_mouse
+    }
+
+    pub fn want_capture_keyboard(&self) -> bool {
+        let io = self.imgui.io();
+        io.want_capture_keyboard
     }
 }

@@ -22,7 +22,7 @@ use ggez::{
     Context,
 };
 use image::io::Reader as ImageReader;
-use imgui::Window;
+use imgui::{Window, MenuItem};
 use imgui_winit_support::WinitPlatform;
 use libosu::{
     beatmap::Beatmap,
@@ -417,19 +417,6 @@ impl Game {
 
         self.draw_seeker(ctx)?;
 
-        let mut show = true;
-        self.imgui.render(ctx, 1.0, |ui| {
-            // Window
-            Window::new("Hello world")
-                .size([300.0, 600.0], imgui::Condition::FirstUseEver)
-                .position([50.0, 50.0], imgui::Condition::FirstUseEver)
-                .build(&ui, || {
-                    // Your window stuff here!
-                    ui.text("Hi from this label!");
-                });
-            ui.show_demo_window(&mut show);
-        });
-
         // draw whatever tool user is using
         let (mx, my) = self.mouse_pos;
         let pos_x = (mx - PLAYFIELD_BOUNDS.x) / PLAYFIELD_BOUNDS.w * 512.0;
@@ -532,6 +519,54 @@ impl Game {
             }
             _ => {}
         }
+
+        let mut show = true;
+        self.imgui.render(ctx, 1.0, |ui| {
+            if let Some(menu_bar) = ui.begin_main_menu_bar() {
+                if let Some(menu) = ui.begin_menu("File") {
+                    MenuItem::new("Save <C-s>").build(ui);
+                    MenuItem::new("Create Difficulty").build(ui);
+                    ui.separator();
+                    MenuItem::new("Revert to Saved <C-l>").build(ui);
+                    MenuItem::new("Export...").build(ui);
+                    ui.separator();
+                    MenuItem::new("Open Song Folder").build(ui);
+                    MenuItem::new("Exit <Esc>").build(ui);
+                    menu.end();
+                }
+                if let Some(menu) = ui.begin_menu("Edit") {
+                    menu.end();
+                }
+                if let Some(menu) = ui.begin_menu("View") {
+                    menu.end();
+                }
+                if let Some(menu) = ui.begin_menu("Compose") {
+                    menu.end();
+                }
+                if let Some(menu) = ui.begin_menu("Design") {
+                    menu.end();
+                }
+                if let Some(menu) = ui.begin_menu("Timing") {
+                    menu.end();
+                }
+                if let Some(menu) = ui.begin_menu("Web") {
+                    menu.end();
+                }
+                if let Some(menu) = ui.begin_menu("Help") {
+                    menu.end();
+                }
+                menu_bar.end();
+            }
+            // Window
+            // Window::new("Hello world")
+            //     .size([300.0, 600.0], imgui::Condition::FirstUseEver)
+            //     .position([50.0, 50.0], imgui::Condition::FirstUseEver)
+            //     .build(&ui, || {
+            //         // Your window stuff here!
+            //         ui.text("Hi from this label!");
+            //     });
+            // ui.show_demo_window(&mut show);
+        });
 
         graphics::present(ctx)?;
         self.frame += 1;

@@ -23,6 +23,9 @@ impl EventHandler for Game {
     ) -> GameResult {
         self.mouse_pos = (x, y);
         self.imgui.update_mouse_pos(x, y);
+        if self.imgui.want_capture_mouse() {
+            return Ok(());
+        }
         Ok(())
     }
 
@@ -34,6 +37,10 @@ impl EventHandler for Game {
         y: f32,
     ) -> GameResult {
         self.imgui.update_mouse_down(btn);
+        if self.imgui.want_capture_mouse() {
+            return Ok(());
+        }
+
         // TODO: figure out if the UI handled anything, and then whether or not to keep going into
         // letting the rest of the code handle the mouse press or not
         match btn {
@@ -85,6 +92,11 @@ impl EventHandler for Game {
     }
 
     fn mouse_wheel_event(&mut self, _: &mut Context, x: f32, y: f32) -> GameResult {
+        self.imgui.update_scroll(x, y);
+        if self.imgui.want_capture_mouse() {
+            return Ok(());
+        }
+
         self.seek_by_steps(-y as i32);
         Ok(())
     }
@@ -92,6 +104,9 @@ impl EventHandler for Game {
     fn key_up_event(&mut self, _: &mut Context, keycode: KeyCode, keymods: KeyMods) -> GameResult {
         use KeyCode::*;
         self.imgui.update_key_up(keycode, keymods);
+        if self.imgui.want_capture_keyboard() {
+            return Ok(());
+        }
 
         match keycode {
             Space => self.toggle_playing(),
@@ -114,6 +129,9 @@ impl EventHandler for Game {
     ) -> GameResult {
         use KeyCode::*;
         self.imgui.update_key_down(keycode, keymods);
+        if self.imgui.want_capture_keyboard() {
+            return Ok(());
+        }
 
         self.keymap.insert(keycode);
         match keycode {
