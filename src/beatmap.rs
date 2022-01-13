@@ -70,7 +70,7 @@ impl BeatmapExt {
                         * self.inner.stack_leniency;
 
                     // We are no longer within stacking range of the next object.
-                    if (object_n.inner.start_time.0 as f64 - end_time) > stack_threshold {
+                    if (object_n.inner.start_time.as_seconds() - end_time) > stack_threshold {
                         break;
                     }
 
@@ -98,9 +98,7 @@ impl BeatmapExt {
         // Reverse pass for stack calculation.
         let mut extended_start_idx = start_idx;
 
-        for i in (start_idx..=extended_end_idx).rev() {
-            let mut n = i;
-
+        for i in ((start_idx + 1)..=extended_end_idx).rev() {
             // We should check every note which has not yet got a stack.
             // Consider the case we have two interwound stacks and this will make sense.
             // o <-1      o <-2
@@ -121,7 +119,7 @@ impl BeatmapExt {
 
             match object_i.inner.kind {
                 HitObjectKind::Circle => {
-                    for n in (0..n).rev() {
+                    for n in (0..i).rev() {
                         if self.hit_objects[n].inner.kind.is_spinner() {
                             continue;
                         }
@@ -131,7 +129,7 @@ impl BeatmapExt {
                             .get_hitobject_end_time(&self.hit_objects[n].inner)
                             .unwrap();
 
-                        if (self.hit_objects[iidx].inner.start_time.0 as f64 - end_time)
+                        if (self.hit_objects[iidx].inner.start_time.as_seconds() - end_time)
                             > stack_threshold
                         {
                             break;
@@ -183,15 +181,15 @@ impl BeatmapExt {
                         }
                     }
                 }
+
                 HitObjectKind::Slider(_) => {
-                    for n in (start_idx..n).rev() {
+                    for n in (start_idx..i).rev() {
                         if self.hit_objects[n].inner.kind.is_spinner() {
                             continue;
                         }
 
-                        if (self.hit_objects[iidx].inner.start_time.0
-                            - self.hit_objects[n].inner.start_time.0)
-                            as f64
+                        if (self.hit_objects[iidx].inner.start_time.as_seconds()
+                            - self.hit_objects[n].inner.start_time.as_seconds())
                             > stack_threshold
                         {
                             break;
@@ -208,6 +206,7 @@ impl BeatmapExt {
                         }
                     }
                 }
+
                 _ => {}
             }
         }

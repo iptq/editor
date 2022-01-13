@@ -230,9 +230,9 @@ impl Game {
         graphics::queue_text(ctx, &text, [0.0, 0.0], Some(Color::WHITE));
         graphics::draw_queued_text(ctx, DrawParam::default(), None, FilterMode::Linear)?;
 
-        self.draw_timeline(ctx, time)?;
-
         self.draw_hitobjects(ctx, time)?;
+
+        self.draw_timeline(ctx, time)?;
 
         self.draw_seeker(ctx)?;
 
