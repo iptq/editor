@@ -94,6 +94,8 @@ impl EventHandler for Game {
                     if px == x && py == y {
                         self.handle_click(MouseButton::Left, x, y).unwrap();
                     }
+                } else {
+                    self.handle_click(MouseButton::Left, x, y).unwrap();
                 }
                 self.left_drag_start = None;
             }
@@ -102,6 +104,8 @@ impl EventHandler for Game {
                     if px == x && py == y {
                         self.handle_click(MouseButton::Right, x, y).unwrap();
                     }
+                } else {
+                    self.handle_click(MouseButton::Left, x, y).unwrap();
                 }
                 self.right_drag_start = None;
             }

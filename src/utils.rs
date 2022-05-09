@@ -3,6 +3,7 @@ use std::path::{Path, PathBuf};
 use anyhow::Result;
 use ggez::graphics::Rect;
 
+/// Case-insensitive file searching.
 pub fn fuck_you_windows(
     parent: impl AsRef<Path>,
     name: impl AsRef<str>,

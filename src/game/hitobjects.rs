@@ -81,7 +81,9 @@ impl Game {
             };
             let circle_is_hit = current_time > ho_time;
 
-            if ho_time - preempt <= current_time && current_time <= end_time + fade_out_offset {
+            if ho_time - preempt <= current_time
+                && current_time <= end_time + fade_out_offset + fade_out_time
+            {
                 playfield_hitobjects.push(DrawInfo {
                     hit_object: ho,
                     fade_opacity,
@@ -162,7 +164,7 @@ impl Game {
                 let spline = self.slider_cache.get(&control_points).unwrap();
                 Game::render_slider_wireframe(ctx, &control_points, PLAYFIELD_BOUNDS, faded_color)?;
 
-                if current_time > ho_time && current_time < draw_info.end_time {
+                if current_time >= ho_time && current_time <= draw_info.end_time {
                     let elapsed_time = current_time - ho_time;
                     let total_duration = draw_info.end_time - ho_time;
                     let single_duration = total_duration / info.num_repeats as f64;
@@ -175,11 +177,14 @@ impl Game {
                         travel_percent = 1.0 - travel_percent;
                     }
                     let travel_length = travel_percent * info.pixel_length;
+
                     let pos = spline.point_at_length(travel_length);
                     let ball_pos = [
                         PLAYFIELD_BOUNDS.x + osupx_scale_x * pos.x as f32,
                         PLAYFIELD_BOUNDS.y + osupx_scale_y * pos.y as f32,
                     ];
+
+                    // draw slider ball
                     self.skin.sliderb.draw_frame(
                         ctx,
                         (cs_real * 1.8, cs_real * 1.8),
